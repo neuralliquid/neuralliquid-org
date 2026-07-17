@@ -12,8 +12,8 @@ locals {
     }
     omnipost = {
       name   = "omnipost"
-      record = "neuralliquid.ai"
-      ttl    = 300
+      record = "nl-dev-omnipost-web.azurewebsites.net"
+      ttl    = 3600
     }
     cognitive_mesh = {
       name   = "cognitive-mesh"
@@ -40,6 +40,10 @@ locals {
   app_service_validation_records = {
     convolens = {
       name = "asuid.convolens"
+      ttl  = 300
+    }
+    omnipost = {
+      name = "asuid.omnipost"
       ttl  = 300
     }
     cognitive_mesh = {

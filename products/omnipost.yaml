@@ -1,16 +1,16 @@
 name: Omnipost
 repo: https://github.com/neuralliquid/omnipost
 canonical_host: omnipost.neuralliquid.ai
-current_dns_target: neuralliquid.ai
-desired_dns_target: pending-live-agent-target
-status: deferred-live-agent-active
+current_dns_target: nl-dev-omnipost-web.azurewebsites.net
+desired_dns_target: nl-dev-omnipost-web.azurewebsites.net
+status: live-dns-ready-for-org-import
 ownership:
-  dns: neuralliquid-org-after-target-stabilizes
+  dns: neuralliquid-org
   runtime: omnipost
   custom_domain_binding: omnipost
   monitoring: omnipost-with-org-standards
 notes:
-  - Live DNS currently CNAMEs to the apex and returns Azure default 404.
-  - Omnipost is intentionally excluded from destructive migration while the live agent is making it live.
+  - Live DNS currently CNAMEs to nl-dev-omnipost-web.azurewebsites.net and returns HTTPS 200.
+  - Omnipost runtime and Bicep migration remain product-owned after DNS import.
   - Existing Bicep custom-domain docs still reference nexamesh.ai and need Terraform migration after the live target is stable.
   - See docs/products/omnipost-terraform-migration.md for the Bicep disposition and re-entry checklist.

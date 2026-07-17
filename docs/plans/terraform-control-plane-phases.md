@@ -29,11 +29,9 @@ Exit criteria:
 
 Owner: `neuralliquid-org`
 
-- Import confirmed-good DNS records for `convolens.neuralliquid.ai` and
-  `hov.neuralliquid.ai`.
-- Keep Cognitive Mesh DNS in its current owner until live Terraform state
-  ownership is verified.
-- Keep Omnipost DNS marked pending while the live agent is active.
+- Import confirmed-good DNS records for `convolens.neuralliquid.ai`,
+  `omnipost.neuralliquid.ai`, `hov.neuralliquid.ai`, and the Cognitive Mesh
+  NeuralLiquid hostnames.
 - Maintain a DNS cutover runbook for CNAME, `asuid.*` TXT validation, managed
   certificates, TTLs, and rollback.
 
@@ -71,23 +69,22 @@ Exit criteria:
 - HOV runtime remains product-owned.
 - HOV DNS ownership is documented and drift-free.
 
-## Phase 4: Cognitive Mesh Boundary Review
+## Phase 4: Cognitive Mesh Product Boundary Review
 
 Owner: `cognitive-mesh` and `neuralliquid-org`
 
-- Verify current Terraform state ownership before moving any DNS records.
-- Decide whether these records move to org DNS now or remain a documented
-  exception:
+- Keep Cognitive Mesh app/runtime infrastructure in the Cognitive Mesh repo.
+- Confirm product Terraform no longer owns the org-imported DNS records:
   - `cognitive-mesh.neuralliquid.ai`
   - `control.cognitive-mesh.neuralliquid.ai`
   - `api.cognitivemesh.neuralliquid.ai`
-- If moving, use a state handoff/import plan. Do not manage the same record from
-  two states.
+- If product state still owns one of these records, remove it from product state
+  with a deliberate state handoff. Do not manage the same record from two states.
 
 Exit criteria:
 
-- Current owner is documented.
-- Migration or exception decision is recorded.
+- Product runtime remains product-owned.
+- DNS state ownership is documented and duplicate ownership is removed.
 
 ## Phase 5: Org Factory Layer
 
@@ -121,17 +118,16 @@ Exit criteria:
 - Each product has a minimum viable observability profile.
 - Org-level cost alerts exist for shared scope.
 
-## Phase 7: Omnipost Re-entry
+## Phase 7: Omnipost Runtime Re-entry
 
 Owner: `omnipost` and `neuralliquid-org`
 
-Omnipost is intentionally deferred while the live agent is still making it live.
+Omnipost DNS is live and should be imported into org DNS. Runtime/Bicep
+migration remains product-owned and should wait until the live path is stable.
 
 - Inventory what the agent created: branch, workflow, subscription, resource
   group, app name, DNS target, and any state files.
 - Decide whether to import live resources into Terraform or replace them.
-- Move `omnipost.neuralliquid.ai` DNS records into `neuralliquid-org` only after
-  the target hostname and validation TXT are stable.
 - Move Omnipost runtime resources into Omnipost Terraform.
 - Remove Bicep only after Terraform parity and a successful apply.
 

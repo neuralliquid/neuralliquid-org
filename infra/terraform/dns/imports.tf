@@ -34,6 +34,11 @@ import {
 }
 
 import {
+  to = azurerm_dns_txt_record.app_service_validation["omnipost"]
+  id = "/subscriptions/bb4e3882-2079-4bab-8974-611bc0b8bb58/resourceGroups/mys-global-shared-rg/providers/Microsoft.Network/dnsZones/neuralliquid.ai/TXT/asuid.omnipost"
+}
+
+import {
   to = azurerm_dns_txt_record.app_service_validation["cognitive_mesh"]
   id = "/subscriptions/bb4e3882-2079-4bab-8974-611bc0b8bb58/resourceGroups/mys-global-shared-rg/providers/Microsoft.Network/dnsZones/neuralliquid.ai/TXT/asuid.cognitive-mesh"
 }
