@@ -61,6 +61,12 @@ products/
   <product>.yaml
 ```
 
+## Planning Artifacts
+
+- [ADR 0001: Control Plane and Product Repo Boundaries](docs/adr/0001-control-plane-boundaries.md)
+- [Terraform Control Plane Phases](docs/plans/terraform-control-plane-phases.md)
+- [Omnipost Terraform Migration Notes](docs/products/omnipost-terraform-migration.md)
+
 ## First Milestone
 
 1. Import the `neuralliquid.ai` DNS record model into Terraform state.
