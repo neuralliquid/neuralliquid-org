@@ -23,7 +23,7 @@ Known live state on 2026-07-17:
 
 | Host | Current target | Status |
 | --- | --- | --- |
-| `convolens.neuralliquid.ai` | `neuralliquid.ai` | Broken: Azure default 404/HSTS failure |
+| `convolens.neuralliquid.ai` | `nl-prod-convolens-web.azurewebsites.net` | Healthy |
 | `omnipost.neuralliquid.ai` | `neuralliquid.ai` | Broken: Azure default 404 |
 | `cognitive-mesh.neuralliquid.ai` | `cognitive-mesh-frontend-prod.azurewebsites.net` | Healthy |
 | `hov.neuralliquid.ai` | `nl-prod-hov-app.azurewebsites.net` | Healthy |
@@ -63,7 +63,7 @@ products/
 
 ## First Milestone
 
-1. Import or recreate the `neuralliquid.ai` DNS zone model.
-2. Move Convolens and Omnipost away from `CNAME -> neuralliquid.ai`.
-3. Reconcile HOV manual DNS/custom-domain drift into durable IaC.
+1. Import the `neuralliquid.ai` DNS record model into Terraform state.
+2. Move Omnipost away from `CNAME -> neuralliquid.ai` once the target app exists.
+3. Reconcile Convolens and HOV manual DNS/custom-domain drift into durable product IaC.
 4. Decide whether Cognitive Mesh DNS moves here immediately or remains a documented temporary exception.

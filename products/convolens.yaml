@@ -1,9 +1,11 @@
 name: Convolens
 repo: https://github.com/neuralliquid/convolens
 canonical_host: convolens.neuralliquid.ai
-current_dns_target: neuralliquid.ai
+current_dns_target: nl-prod-convolens-web.azurewebsites.net
 desired_dns_target: nl-prod-convolens-web.azurewebsites.net
-status: broken
+status: healthy
 notes:
-  - Live DNS currently CNAMEs to the apex and returns Azure default 404.
-  - Product Terraform declares custom_hostname but treats DNS binding as a go-live step.
+  - DNS now CNAMEs to nl-prod-convolens-web.azurewebsites.net.
+  - Hostname binding and SNI managed certificate were applied on 2026-07-17.
+  - App Service plan was upgraded from F1 to B1 because managed certificates are not supported on Free/Shared.
+  - Product Terraform still needs to reconcile the B1 plan and custom-domain binding.
