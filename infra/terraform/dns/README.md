@@ -18,14 +18,28 @@ The zone itself is read as a data source. Product records are managed here.
 - `hov.neuralliquid.ai`
 - App Service `asuid.*` TXT validation records for bound hosts
 
+## Backend
+
+This stack uses the `azurerm` backend declared in `backend.tf`:
+
+- resource group: `nl-org-tfstate-rg`
+- storage account: `nlorgtfstate`
+- container: `tfstate`
+- key: `dns/terraform.tfstate`
+
+Bootstrap that backend first with `infra/terraform/bootstrap/tfstate`. Use
+`init -backend=false` only for validation before the backend exists.
+
 ## Import
 
 Terraform import blocks are declared in `imports.tf`. With Terraform 1.5+,
 `terraform apply` will import those existing records before managing them.
 
-Use a plan first:
+Use a remote-backend plan before apply:
 
 ```powershell
+terraform -chdir=infra/terraform/bootstrap/tfstate init
+terraform -chdir=infra/terraform/bootstrap/tfstate apply
 terraform -chdir=infra/terraform/dns init
 terraform -chdir=infra/terraform/dns plan
 ```

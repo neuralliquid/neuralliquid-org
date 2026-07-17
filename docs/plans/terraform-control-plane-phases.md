@@ -12,7 +12,8 @@ Owner: `neuralliquid-org`
 
 - Keep the org repo as the source for inventory, DNS inventory, runbooks, and
   Terraform ownership rules.
-- Establish the remote Terraform backend before any org-level apply.
+- Establish the remote Terraform backend with
+  `infra/terraform/bootstrap/tfstate` before any org-level apply.
 - Record ADRs for repo boundaries, Terraform state ownership, DNS ownership,
   monitoring/logging policy, and cost-control defaults.
 - Make no product runtime changes in this phase.
@@ -21,7 +22,8 @@ Exit criteria:
 
 - Boundary ADR exists.
 - Phase plan exists.
-- DNS Terraform validates and has a backend plan before apply.
+- DNS Terraform validates with `init -backend=false`, and the backend bootstrap
+  stack has a reviewed plan before any DNS apply.
 
 ## Phase 1: DNS Ownership Hardening
 

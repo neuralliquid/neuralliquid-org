@@ -54,6 +54,8 @@ docs/
   runbooks/
 infra/
   terraform/
+    bootstrap/
+      tfstate/
     dns/
     github/
     azure/
@@ -69,7 +71,8 @@ products/
 
 ## First Milestone
 
-1. Import the `neuralliquid.ai` DNS record model into Terraform state.
-2. Move Omnipost away from `CNAME -> neuralliquid.ai` once the target app exists.
-3. Reconcile Convolens and HOV manual DNS/custom-domain drift into durable product IaC.
-4. Decide whether Cognitive Mesh DNS moves here immediately or remains a documented temporary exception.
+1. Bootstrap the `neuralliquid-org` remote Terraform state backend.
+2. Import the `neuralliquid.ai` DNS record model into Terraform state.
+3. Move Omnipost away from `CNAME -> neuralliquid.ai` once the target app exists.
+4. Reconcile Convolens and HOV manual DNS/custom-domain drift into durable product IaC.
+5. Decide whether Cognitive Mesh DNS moves here immediately or remains a documented temporary exception.
