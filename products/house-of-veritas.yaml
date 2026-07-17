@@ -1,0 +1,9 @@
+name: House of Veritas
+repo: https://github.com/neuralliquid/house-of-veritas
+canonical_host: hov.neuralliquid.ai
+current_dns_target: nl-prod-hov-app.azurewebsites.net
+desired_dns_target: nl-prod-hov-app.azurewebsites.net
+status: healthy
+notes:
+  - Live DNS and HTTPS are healthy.
+  - HOV handoff notes state DNS/custom-domain/cert were applied manually and should be reconciled into IaC.

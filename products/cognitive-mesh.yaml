@@ -1,0 +1,9 @@
+name: Cognitive Mesh
+repo: https://github.com/neuralliquid/cognitive-mesh
+canonical_host: cognitive-mesh.neuralliquid.ai
+current_dns_target: cognitive-mesh-frontend-prod.azurewebsites.net
+desired_dns_target: cognitive-mesh-frontend-prod.azurewebsites.net
+status: healthy
+notes:
+  - Product Terraform currently manages public DNS records in the neuralliquid.ai zone.
+  - Decide whether to migrate those DNS records into neuralliquid-org or keep as a documented temporary exception.

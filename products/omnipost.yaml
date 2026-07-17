@@ -1,0 +1,9 @@
+name: Omnipost
+repo: https://github.com/neuralliquid/omnipost
+canonical_host: omnipost.neuralliquid.ai
+current_dns_target: neuralliquid.ai
+desired_dns_target: nl-prod-omnipost-app.azurewebsites.net
+status: broken
+notes:
+  - Live DNS currently CNAMEs to the apex and returns Azure default 404.
+  - Existing Bicep custom-domain docs still reference nexamesh.ai and need migration.

@@ -1,0 +1,9 @@
+name: Convolens
+repo: https://github.com/neuralliquid/convolens
+canonical_host: convolens.neuralliquid.ai
+current_dns_target: neuralliquid.ai
+desired_dns_target: nl-prod-convolens-web.azurewebsites.net
+status: broken
+notes:
+  - Live DNS currently CNAMEs to the apex and returns Azure default 404.
+  - Product Terraform declares custom_hostname but treats DNS binding as a go-live step.
