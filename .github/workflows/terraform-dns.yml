@@ -1,0 +1,65 @@
+name: Terraform DNS
+
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: "Run a DNS plan or apply"
+        required: true
+        type: choice
+        default: plan
+        options:
+          - plan
+          - apply
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: terraform-dns
+  cancel-in-progress: false
+
+env:
+  ARM_CLIENT_ID: ${{ vars.AZURE_CLIENT_ID }}
+  ARM_TENANT_ID: ${{ vars.AZURE_TENANT_ID }}
+  ARM_SUBSCRIPTION_ID: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+  ARM_USE_OIDC: true
+
+jobs:
+  dns:
+    name: DNS ${{ inputs.mode }}
+    runs-on: ubuntu-latest
+    environment: production
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Check Azure OIDC variables
+        shell: bash
+        run: |
+          test -n "$ARM_CLIENT_ID"
+          test -n "$ARM_TENANT_ID"
+          test -n "$ARM_SUBSCRIPTION_ID"
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_wrapper: false
+
+      - name: Check formatting
+        run: terraform fmt -check -recursive infra/terraform/dns
+
+      - name: Init DNS
+        run: terraform -chdir=infra/terraform/dns init
+
+      - name: Validate DNS
+        run: terraform -chdir=infra/terraform/dns validate
+
+      - name: Plan DNS
+        run: terraform -chdir=infra/terraform/dns plan -no-color -out=tfplan
+
+      - name: Apply DNS
+        if: inputs.mode == 'apply'
+        run: terraform -chdir=infra/terraform/dns apply -auto-approve tfplan

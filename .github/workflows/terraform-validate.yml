@@ -1,0 +1,45 @@
+name: Terraform Validate
+
+on:
+  pull_request:
+    paths:
+      - "infra/terraform/**"
+      - ".github/workflows/terraform-*.yml"
+  push:
+    branches:
+      - main
+    paths:
+      - "infra/terraform/**"
+      - ".github/workflows/terraform-*.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    name: Validate Terraform
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_wrapper: false
+
+      - name: Check formatting
+        run: terraform fmt -check -recursive infra/terraform
+
+      - name: Init bootstrap without backend
+        run: terraform -chdir=infra/terraform/bootstrap/tfstate init -backend=false
+
+      - name: Validate bootstrap
+        run: terraform -chdir=infra/terraform/bootstrap/tfstate validate
+
+      - name: Init DNS without backend
+        run: terraform -chdir=infra/terraform/dns init -backend=false
+
+      - name: Validate DNS
+        run: terraform -chdir=infra/terraform/dns validate

@@ -5,5 +5,6 @@ terraform {
     storage_account_name = "nlorgtfstate"
     container_name       = "tfstate"
     key                  = "dns/terraform.tfstate"
+    use_azuread_auth     = true
   }
 }

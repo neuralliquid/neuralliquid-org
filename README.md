@@ -67,6 +67,7 @@ products/
 
 - [ADR 0001: Control Plane and Product Repo Boundaries](docs/adr/0001-control-plane-boundaries.md)
 - [Terraform Control Plane Phases](docs/plans/terraform-control-plane-phases.md)
+- [Terraform CI and Apply](docs/runbooks/terraform-ci.md)
 - [Omnipost Terraform Migration Notes](docs/products/omnipost-terraform-migration.md)
 
 ## First Milestone
