@@ -9,11 +9,19 @@ bootstrap and DNS stacks with backends disabled.
 `Terraform DNS` is a manual workflow for the org-owned DNS stack. It can run a
 remote-backed plan or apply.
 
-## Required GitHub Configuration
+## Current GitHub Configuration
 
-Create a protected environment:
+Current mode: quick iteration. Gates are documented but not enforced while this
+is a solo internal control plane.
 
 - `production`
+
+The `production` environment exists for deployment history and future approval
+gates. Required reviewers, admin-bypass blocking, and deployment branch policies
+are currently disabled.
+
+`main` branch protection is currently disabled. Re-enable it when the repo moves
+out of solo quick-iteration mode.
 
 Add repository or environment variables:
 
@@ -40,6 +48,16 @@ subscription Contributor for routine DNS applies.
 - Use `Terraform DNS` in `plan` mode before `apply`.
 - Apply from `main` only.
 - Keep product runtime resources out of this workflow.
+
+## Future Gates
+
+When this control plane moves out of quick iteration, re-enable:
+
+- `main` branch protection requiring pull requests, one approving review,
+  conversation resolution, linear history, and the `Validate Terraform` status
+  check.
+- `production` environment required reviewers.
+- `production` environment deployment branch policy for protected branches only.
 
 ## Local State Cleanup
 
