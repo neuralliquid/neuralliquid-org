@@ -1,0 +1,66 @@
+name: Deploy Site
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirmation:
+        description: "Type DEPLOY to publish site/ to production"
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: deploy-neuralliquid-site
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Deploy production site
+    runs-on: ubuntu-latest
+    environment: production
+
+    steps:
+      - name: Require main and explicit confirmation
+        shell: bash
+        env:
+          CONFIRMATION: ${{ inputs.confirmation }}
+        run: |
+          test "$GITHUB_REF" = "refs/heads/main"
+          test "$CONFIRMATION" = "DEPLOY"
+
+      - name: Checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - name: Azure login with OIDC
+        uses: azure/login@1384c340ab2dda50fed2bee3041d1d87018aa5e8 # v2
+        with:
+          client-id: ${{ vars.AZURE_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Retrieve and mask deployment token
+        shell: bash
+        env:
+          STATIC_WEB_APP_ID: /subscriptions/${{ vars.AZURE_SUBSCRIPTION_ID }}/resourceGroups/nl-prod-web-rg/providers/Microsoft.Web/staticSites/nl-prod-web-swa
+        run: |
+          set -euo pipefail
+          token="$(az rest \
+            --method post \
+            --url "https://management.azure.com${STATIC_WEB_APP_ID}/listSecrets?api-version=2023-12-01" \
+            --query properties.apiKey \
+            --output tsv)"
+          test -n "$token"
+          echo "::add-mask::$token"
+          echo "SWA_DEPLOYMENT_TOKEN=$token" >> "$GITHUB_ENV"
+
+      - name: Deploy raw site
+        uses: Azure/static-web-apps-deploy@1a947af9992250f3bc2e68ad0754c0b0c11566c9 # v1
+        with:
+          azure_static_web_apps_api_token: ${{ env.SWA_DEPLOYMENT_TOKEN }}
+          action: upload
+          app_location: site
+          output_location: ""
+          skip_app_build: true

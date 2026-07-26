@@ -22,10 +22,10 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
       - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v3
+        uses: hashicorp/setup-terraform@b9cd54a3c349d3f38e8881555d616ced269862dd # v3
         with:
           terraform_wrapper: false
 
@@ -43,3 +43,9 @@ jobs:
 
       - name: Validate DNS
         run: terraform -chdir=infra/terraform/dns validate
+
+      - name: Init web without backend
+        run: terraform -chdir=infra/terraform/web init -backend=false
+
+      - name: Validate web
+        run: terraform -chdir=infra/terraform/web validate
