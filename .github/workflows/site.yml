@@ -1,4 +1,4 @@
-name: Static Site
+name: Static Site Validation
 
 on:
   pull_request:
@@ -12,13 +12,6 @@ on:
     paths:
       - "site/**"
       - "scripts/validate-site.mjs"
-  workflow_dispatch:
-    inputs:
-      deploy_production:
-        description: "Type DEPLOY to publish the current main branch"
-        required: true
-        type: string
-
 permissions:
   contents: read
 
@@ -35,21 +28,3 @@ jobs:
           node-version: 22
       - name: Validate pages and local links
         run: node scripts/validate-site.mjs
-
-  deploy:
-    name: Deploy production site
-    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && inputs.deploy_production == 'DEPLOY'
-    needs: validate
-    runs-on: ubuntu-latest
-    environment: production
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-      - name: Deploy to Azure Static Web Apps
-        uses: Azure/static-web-apps-deploy@v1
-        with:
-          azure_static_web_apps_api_token: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN }}
-          action: upload
-          app_location: site
-          output_location: ""
-          skip_app_build: true
