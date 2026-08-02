@@ -16,8 +16,13 @@ The zone itself is read as a data source. Product records are managed here.
 - `control.cognitive-mesh.neuralliquid.ai`
 - `api.cognitivemesh.neuralliquid.ai`
 - `hov.neuralliquid.ai`
-- `login.hov.neuralliquid.ai` (HOV-branded browser entrypoint to Mystira Identity)
+- `login.hov.neuralliquid.ai` (HOV-branded browser entrypoint to the current
+  Mystira dev Identity App Service)
 - App Service `asuid.*` TXT validation records for bound hosts
+
+`login.hov` uses the dedicated
+`mystira_identity_app_service_verification_id` input for its `asuid` TXT value;
+it does not assume the NeuralLiquid App Services share Mystira Identity's ID.
 
 ## Backend
 
