@@ -16,6 +16,7 @@ The zone itself is read as a data source. Product records are managed here.
 - `control.cognitive-mesh.neuralliquid.ai`
 - `api.cognitivemesh.neuralliquid.ai`
 - `hov.neuralliquid.ai`
+- `login.hov.neuralliquid.ai` (HOV-branded browser entrypoint to Mystira Identity)
 - App Service `asuid.*` TXT validation records for bound hosts
 
 ## Backend

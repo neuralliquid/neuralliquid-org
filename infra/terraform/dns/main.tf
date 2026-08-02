@@ -35,6 +35,11 @@ locals {
       record = "nl-prod-hov-app.azurewebsites.net"
       ttl    = 300
     }
+    hov_login = {
+      name   = "login.hov"
+      record = "mys-dev-id-webapi.azurewebsites.net"
+      ttl    = 300
+    }
   }
 
   app_service_validation_records = {
@@ -61,6 +66,10 @@ locals {
     hov = {
       name = "asuid.hov"
       ttl  = 3600
+    }
+    hov_login = {
+      name = "asuid.login.hov"
+      ttl  = 300
     }
   }
 }
