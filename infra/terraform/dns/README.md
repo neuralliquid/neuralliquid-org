@@ -22,7 +22,9 @@ The zone itself is read as a data source. Product records are managed here.
 
 `login.hov` uses the dedicated
 `mystira_identity_app_service_verification_id` input for its `asuid` TXT value;
-it does not assume the NeuralLiquid App Services share Mystira Identity's ID.
+it does not derive that value from the NeuralLiquid App Services input. The two
+IDs currently have the same Azure-sourced value but remain independently
+configurable so either can rotate without changing the other product hosts.
 
 ## Backend
 

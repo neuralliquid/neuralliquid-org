@@ -24,6 +24,11 @@ variable "app_service_verification_id" {
 
 variable "mystira_identity_app_service_verification_id" {
   type        = string
-  description = "Custom-domain verification ID for the Mystira Identity App Service used by login.hov."
+  description = "Independently sourced custom-domain verification ID for the Mystira Identity App Service used by login.hov."
   default     = "05B038A75C9A9151C1E0ECF5F652F255707230C7408A56A6686F15CA9CDA6872"
+
+  validation {
+    condition     = length(trimspace(var.mystira_identity_app_service_verification_id)) > 0
+    error_message = "mystira_identity_app_service_verification_id must not be empty."
+  }
 }
