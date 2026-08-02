@@ -35,32 +35,48 @@ locals {
       record = "nl-prod-hov-app.azurewebsites.net"
       ttl    = 300
     }
+    hov_login = {
+      name   = "login.hov"
+      record = "mys-dev-id-webapi.azurewebsites.net"
+      ttl    = 300
+    }
   }
 
   app_service_validation_records = {
     convolens = {
-      name = "asuid.convolens"
-      ttl  = 300
+      name            = "asuid.convolens"
+      ttl             = 300
+      verification_id = var.app_service_verification_id
     }
     omnipost = {
-      name = "asuid.omnipost"
-      ttl  = 300
+      name            = "asuid.omnipost"
+      ttl             = 300
+      verification_id = var.app_service_verification_id
     }
     cognitive_mesh = {
-      name = "asuid.cognitive-mesh"
-      ttl  = 300
+      name            = "asuid.cognitive-mesh"
+      ttl             = 300
+      verification_id = var.app_service_verification_id
     }
     cognitive_mesh_control = {
-      name = "asuid.control.cognitive-mesh"
-      ttl  = 3600
+      name            = "asuid.control.cognitive-mesh"
+      ttl             = 3600
+      verification_id = var.app_service_verification_id
     }
     cognitive_mesh_api = {
-      name = "asuid.api.cognitivemesh"
-      ttl  = 300
+      name            = "asuid.api.cognitivemesh"
+      ttl             = 300
+      verification_id = var.app_service_verification_id
     }
     hov = {
-      name = "asuid.hov"
-      ttl  = 3600
+      name            = "asuid.hov"
+      ttl             = 3600
+      verification_id = var.app_service_verification_id
+    }
+    hov_login = {
+      name            = "asuid.login.hov"
+      ttl             = 300
+      verification_id = var.mystira_identity_app_service_verification_id
     }
   }
 }
@@ -84,6 +100,6 @@ resource "azurerm_dns_txt_record" "app_service_validation" {
   ttl                 = each.value.ttl
 
   record {
-    value = var.app_service_verification_id
+    value = each.value.verification_id
   }
 }
