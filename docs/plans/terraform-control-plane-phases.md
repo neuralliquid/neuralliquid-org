@@ -135,3 +135,46 @@ Exit criteria:
 
 - Live target is known and healthy.
 - Terraform owns Omnipost resources without Bicep or agent drift.
+
+## Phase 8: Shared Data Plane
+
+Owner: `neuralliquid-org`; tenant schemas owned by the products
+
+Convolens and House of Veritas share one PostgreSQL server, `nl-prod-shared-pg`,
+created with `az` on 2026-08-06 and belonging to no state. It cannot live in
+either product's Terraform without recreating the guest relationship the move
+was meant to remove, so it is org-owned. See
+[ADR 0002](../adr/0002-shared-data-plane-ownership.md).
+
+- Codify the server, resource group, firewall, server parameters and tenant
+  databases in `infra/terraform/shared-data` using import blocks. **Done**; the
+  first plan read 7 to import, 1 to change (missing tags), 0 to destroy.
+- Apply the import so the resources stop being drift. **Done** 2026-08-07; the
+  stack now plans clean.
+- Move the shared server admin credential out of `nl-prod-convolens-kv` into an
+  org-owned vault in `nl-prod-shared-rg`, and each tenant's connection string
+  into that product's own vault. **Done**; `nl-prod-shared-kv` holds
+  `postgres-admin-password`, `nl-prod-hov-kv` holds `estate-database-url`, and
+  convolens' vault keeps only convolens' secrets.
+- Close the default `PUBLIC` `CONNECT` grant on each tenant database, with both
+  product owners, since it touches both access paths. **Done** 2026-08-07 and
+  verified by cross-tenant connection attempts. Note this is per-database and not
+  managed by Terraform, so onboarding a new tenant must repeat it.
+- Codify the operator grant on `nl-prod-hov-kv`. It was added by hand to move the
+  connection string, and HOV's security module only declares the deploy
+  principal's policy, so the grant is product-side drift until HOV records it.
+- Consider making convolens read its secrets from Key Vault. Its container app
+  holds `db-password`, `jwt-secret`, `acr-password` and
+  `appinsights-connection-string` inline with `keyVaultUrl: null`, so the vault
+  is a store of record that nothing reads and rotation has to happen twice. The
+  app already has a SystemAssigned identity, so the missing pieces are a vault
+  role assignment and `keyVaultUrl` secret references. Convolens-owned work.
+- Retire `nl-prod-convolens-pg` once both applications have been observed
+  healthy on the shared server. It is the rollback path until then, and it is
+  billing.
+
+Exit criteria:
+
+- The shared server is in exactly one Terraform state with a clean plan.
+- No product's vault holds another product's or the org's credentials.
+- The pre-consolidation server is deleted and the second bill has stopped.

@@ -1,0 +1,66 @@
+name: Terraform Shared Data
+
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: "Run a shared data plan or apply"
+        required: true
+        type: choice
+        default: plan
+        options:
+          - plan
+          - apply
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: terraform-shared-data
+  cancel-in-progress: false
+
+env:
+  ARM_CLIENT_ID: ${{ vars.AZURE_CLIENT_ID }}
+  ARM_TENANT_ID: ${{ vars.AZURE_TENANT_ID }}
+  ARM_SUBSCRIPTION_ID: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+  ARM_USE_OIDC: true
+
+jobs:
+  shared-data:
+    name: Shared data ${{ inputs.mode }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment: production
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - name: Check Azure OIDC variables
+        shell: bash
+        run: |
+          test -n "$ARM_CLIENT_ID"
+          test -n "$ARM_TENANT_ID"
+          test -n "$ARM_SUBSCRIPTION_ID"
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@b9cd54a3c349d3f38e8881555d616ced269862dd # v3
+        with:
+          terraform_wrapper: false
+
+      - name: Check formatting
+        run: terraform fmt -check -recursive infra/terraform/shared-data
+
+      - name: Init shared data
+        run: terraform -chdir=infra/terraform/shared-data init
+
+      - name: Validate shared data
+        run: terraform -chdir=infra/terraform/shared-data validate
+
+      - name: Plan shared data
+        run: terraform -chdir=infra/terraform/shared-data plan -no-color -out=tfplan
+
+      - name: Apply shared data
+        if: inputs.mode == 'apply'
+        run: terraform -chdir=infra/terraform/shared-data apply -auto-approve tfplan
