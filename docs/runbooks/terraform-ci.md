@@ -4,10 +4,14 @@
 
 `Terraform Validate` runs on pull requests and pushes to `main` when Terraform
 or Terraform workflow files change. It checks formatting and validates the
-bootstrap and DNS stacks with backends disabled.
+bootstrap, DNS and shared data stacks with backends disabled.
 
 `Terraform DNS` is a manual workflow for the org-owned DNS stack. It can run a
 remote-backed plan or apply.
+
+`Terraform Shared Data` is the equivalent manual workflow for the shared
+PostgreSQL server in `nl-prod-shared-rg`. Same shape: plan or apply, remote
+backend, `production` environment.
 
 ## Current GitHub Configuration
 
@@ -39,15 +43,22 @@ For the DNS workflow identity:
 - DNS record management permissions on the `neuralliquid.ai` DNS zone in
   `mys-global-shared-rg`.
 
-Use least privilege where possible. The identity does not need broad
-subscription Contributor for routine DNS applies.
+For the shared data workflow identity:
+
+- `Storage Blob Data Contributor` on `nlorgtfstate` or the `tfstate` container.
+- `Contributor` scoped to the `nl-prod-shared-rg` resource group.
+
+Use least privilege where possible. Neither identity needs broad subscription
+Contributor for routine applies.
 
 ## Apply Rules
 
 - Run `Terraform Validate` on PRs.
-- Use `Terraform DNS` in `plan` mode before `apply`.
+- Use `Terraform DNS` and `Terraform Shared Data` in `plan` mode before `apply`.
 - Apply from `main` only.
-- Keep product runtime resources out of this workflow.
+- Keep product runtime resources out of these workflows. On the shared server
+  that boundary is the database: the server and the tenant databases are org
+  resources; their schemas, roles and grants are not.
 
 ## Future Gates
 

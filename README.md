@@ -42,8 +42,14 @@ Product repos should own:
 
 - Application source code.
 - Product-specific Terraform/Bicep for app resources.
-- Runtime settings, databases, queues, storage, and application deployment pipelines.
+- Runtime settings, single-product databases, queues, storage, and application
+  deployment pipelines.
+- Schema, roles and grants inside a database on the shared server.
 - App Service/Container App hostname bindings and certificates where those resources live.
+
+Shared data infrastructure — a server used by more than one product — is an
+exception owned here, not by either tenant. See
+[ADR 0002](docs/adr/0002-shared-data-plane-ownership.md).
 
 ## Layout
 
@@ -59,6 +65,7 @@ infra/
     dns/
     github/
     azure/
+    shared-data/
 products/
   <product>.yaml
 ```
@@ -66,6 +73,7 @@ products/
 ## Planning Artifacts
 
 - [ADR 0001: Control Plane and Product Repo Boundaries](docs/adr/0001-control-plane-boundaries.md)
+- [ADR 0002: Shared Data Plane Ownership](docs/adr/0002-shared-data-plane-ownership.md)
 - [Terraform Control Plane Phases](docs/plans/terraform-control-plane-phases.md)
 - [Terraform CI and Apply](docs/runbooks/terraform-ci.md)
 - [Omnipost Terraform Migration Notes](docs/products/omnipost-terraform-migration.md)

@@ -49,3 +49,9 @@ jobs:
 
       - name: Validate web
         run: terraform -chdir=infra/terraform/web validate
+
+      - name: Init shared data without backend
+        run: terraform -chdir=infra/terraform/shared-data init -backend=false
+
+      - name: Validate shared data
+        run: terraform -chdir=infra/terraform/shared-data validate

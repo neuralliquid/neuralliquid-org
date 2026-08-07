@@ -135,3 +135,32 @@ Exit criteria:
 
 - Live target is known and healthy.
 - Terraform owns Omnipost resources without Bicep or agent drift.
+
+## Phase 8: Shared Data Plane
+
+Owner: `neuralliquid-org`; tenant schemas owned by the products
+
+Convolens and House of Veritas share one PostgreSQL server, `nl-prod-shared-pg`,
+created with `az` on 2026-08-06 and belonging to no state. It cannot live in
+either product's Terraform without recreating the guest relationship the move
+was meant to remove, so it is org-owned. See
+[ADR 0002](../adr/0002-shared-data-plane-ownership.md).
+
+- Codify the server, resource group, firewall, server parameters and tenant
+  databases in `infra/terraform/shared-data` using import blocks. Done; the
+  first plan reads 7 to import, 1 to change (missing tags), 0 to destroy.
+- Apply the import so the resources stop being drift.
+- Move the shared server admin credential out of `nl-prod-convolens-kv` into an
+  org-owned vault in `nl-prod-shared-rg`, and each tenant's connection string
+  into that product's own vault.
+- Close the default `PUBLIC` `CONNECT` grant on each tenant database, with both
+  product owners, since it touches both access paths.
+- Retire `nl-prod-convolens-pg` once both applications have been observed
+  healthy on the shared server. It is the rollback path until then, and it is
+  billing.
+
+Exit criteria:
+
+- The shared server is in exactly one Terraform state with a clean plan.
+- No product's vault holds another product's or the org's credentials.
+- The pre-consolidation server is deleted and the second bill has stopped.
