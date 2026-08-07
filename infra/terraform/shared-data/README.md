@@ -27,6 +27,23 @@ Adding a database to `tenant_databases` is the org-level act of granting a
 product a home on the shared server. The product then creates its own role and
 schema. See [ADR 0002](../../../docs/adr/0002-shared-data-plane-ownership.md).
 
+### Onboarding a Tenant
+
+Terraform creates the database; the rest is not automated, and one step is easy
+to miss:
+
+1. Add the database to `tenant_databases` and apply.
+2. Create the product's login role and transfer ownership of the database and
+   its `public` schema to it. No product uses the server admin.
+3. **`REVOKE CONNECT ON DATABASE <db> FROM PUBLIC`.** PostgreSQL grants `CONNECT`
+   to `PUBLIC` on every new database, so until this is run, every other tenant on
+   the server can open a connection to it. This is not something the stack can do
+   for you — it is a grant inside a database, which the org does not own.
+4. Store the product's connection string in *that product's* vault, not here.
+
+Verify by connecting as the new role to another tenant's database and confirming
+`permission denied for database`.
+
 ## Backend
 
 - resource group: `nl-org-tfstate-rg`

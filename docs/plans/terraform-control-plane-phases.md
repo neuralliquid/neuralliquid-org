@@ -157,7 +157,9 @@ was meant to remove, so it is org-owned. See
   `postgres-admin-password`, `nl-prod-hov-kv` holds `estate-database-url`, and
   convolens' vault keeps only convolens' secrets.
 - Close the default `PUBLIC` `CONNECT` grant on each tenant database, with both
-  product owners, since it touches both access paths. Outstanding.
+  product owners, since it touches both access paths. **Done** 2026-08-07 and
+  verified by cross-tenant connection attempts. Note this is per-database and not
+  managed by Terraform, so onboarding a new tenant must repeat it.
 - Codify the operator grant on `nl-prod-hov-kv`. It was added by hand to move the
   connection string, and HOV's security module only declares the deploy
   principal's policy, so the grant is product-side drift until HOV records it.

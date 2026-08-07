@@ -71,12 +71,17 @@ simply switched off in favour of shared tenancy.
   Per-database recovery requires a dump, not PITR. A product that needs an
   independent restore window has outgrown shared tenancy and should move to its
   own server — the move is `pg_dump`, restore, change the connection string.
-- **`PUBLIC` retains `CONNECT` on each database by default.** PostgreSQL grants
-  it, so either tenant role can open a connection to the other's database,
-  though it holds no rights on that database's objects. Closing this is
-  `REVOKE CONNECT ON DATABASE <db> FROM PUBLIC` per database. It touches each
-  product's own access path, so it belongs to the products, coordinated — not to
-  a unilateral org apply.
+- **`PUBLIC`'s default `CONNECT` was revoked on both databases** on 2026-08-07,
+  with both products' owner present, since it touches each product's access path.
+  Each ACL went from `=Tc/owner` to `=T/owner`; owners keep `CONNECT` in their
+  own right. Verified by connecting as each tenant role to both databases — own
+  allowed, other refused with `permission denied for database`. Convolens stayed
+  on revision `0000044` throughout.
+
+  This is not managed by Terraform, and deliberately so: it is a grant inside a
+  database, which this stack does not own. **A new tenant database will be
+  created with `PUBLIC CONNECT` granted by default**, so revoking it is part of
+  onboarding a tenant, not something the stack does for you.
 - Credentials now follow the same ownership line. `nl-prod-shared-kv` was created
   in `nl-prod-shared-rg` for secrets belonging to the server itself, and holds
   `postgres-admin-password`. HOV's connection string moved to
