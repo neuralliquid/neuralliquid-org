@@ -7,6 +7,8 @@
 #
 # See docs/adr/0002-shared-data-plane-ownership.md.
 
+data "azurerm_client_config" "current" {}
+
 locals {
   tags = {
     environment = "prod"
@@ -28,8 +30,17 @@ resource "azurerm_postgresql_flexible_server" "shared" {
   version             = "16"
   zone                = "2"
 
-  administrator_login    = var.administrator_login
-  administrator_password = var.administrator_password
+  administrator_login = var.administrator_login
+
+  # No password attribute is declared here, deliberately. azurerm requires
+  # administrator_password_wo and administrator_password_wo_version to be set as
+  # a pair, and declaring the pair — even wired to null variables — makes the
+  # provider mark the server as needing an update on every plan. Leaving both out
+  # is what keeps a routine plan clean.
+  #
+  # The cost is real and is documented in the README: azurerm will not update
+  # this server at all without the credential, so any genuine change to it must
+  # add the pair back and supply the password from Key Vault for that run.
 
   # Burstable tier, Standard_B1ms. The provider prefixes the tier: B / GP / MO.
   sku_name          = "B_Standard_B1ms"
@@ -47,10 +58,10 @@ resource "azurerm_postgresql_flexible_server" "shared" {
   tags = local.tags
 
   lifecycle {
-    # The password is never held in this state or this repo; it lives in Key
-    # Vault and is rotated out of band. high_availability is Azure-managed on a
-    # Burstable tier and reports back a shape Terraform did not set.
-    ignore_changes = [administrator_password, high_availability]
+    # high_availability is Azure-managed on a Burstable tier and reports back a
+    # shape Terraform did not set.
+    #
+    ignore_changes = [high_availability]
   }
 }
 
@@ -81,6 +92,40 @@ resource "azurerm_postgresql_flexible_server_firewall_rule" "allow_azure_service
   server_id        = azurerm_postgresql_flexible_server.shared.id
   start_ip_address = "0.0.0.0"
   end_ip_address   = "0.0.0.0"
+}
+
+# Org-owned credential store for the shared data plane. It holds secrets that
+# belong to the server rather than to any one tenant — today, the server admin
+# password. A tenant's own connection string does not belong here; it belongs in
+# that product's vault.
+resource "azurerm_key_vault" "shared" {
+  name                = var.key_vault_name
+  resource_group_name = azurerm_resource_group.shared.name
+  location            = azurerm_resource_group.shared.location
+  tenant_id           = data.azurerm_client_config.current.tenant_id
+  sku_name            = "standard"
+
+  # RBAC rather than access policies. The older access-policy model is what
+  # currently makes nl-prod-hov-kv awkward to administer.
+  rbac_authorization_enabled = true
+
+  soft_delete_retention_days = 90
+
+  # Deliberately off. Purge protection cannot be switched back off once set, and
+  # at this size the likelier accident is being unable to reuse a vault name for
+  # 90 days, not a malicious purge. Revisit when the org has more than one
+  # operator.
+  purge_protection_enabled = false
+
+  tags = local.tags
+}
+
+resource "azurerm_role_assignment" "key_vault" {
+  for_each = var.key_vault_role_assignments
+
+  scope                = azurerm_key_vault.shared.id
+  role_definition_name = each.value.role
+  principal_id         = each.value.principal_id
 }
 
 # Both of these currently match the Azure system default. They are declared so

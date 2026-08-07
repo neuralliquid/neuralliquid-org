@@ -6,6 +6,7 @@ it.
 
 - resource group: `nl-prod-shared-rg`
 - server: `nl-prod-shared-pg` (PostgreSQL 16, `B_Standard_B1ms`, 32 GB, South Africa North)
+- vault: `nl-prod-shared-kv` (RBAC-authorized)
 - subscription: `bb4e3882-2079-4bab-8974-611bc0b8bb58`
 
 ## Ownership Line
@@ -35,26 +36,64 @@ schema. See [ADR 0002](../../../docs/adr/0002-shared-data-plane-ownership.md).
 
 ## Import
 
-Every resource here already exists — it was created with `az` during the
-2026-08-06 consolidation and has been drift since. `imports.tf` adopts it.
-Nothing in this stack creates infrastructure.
+The PostgreSQL resources already existed — they were created with `az` during the
+2026-08-06 consolidation and were drift until adopted. `imports.tf` records that
+adoption; it ran on 2026-08-07 and reads *7 to import, 1 to change*. The import
+blocks are kept rather than deleted, because they document how these resources
+entered state and are harmless once satisfied.
+
+The vault and its role assignment were created by this stack, not imported.
 
 ```powershell
 terraform -chdir=infra/terraform/shared-data init
 terraform -chdir=infra/terraform/shared-data plan
 ```
 
-A correct first plan reads **7 to import, 0 to add, 1 to change, 0 to destroy**.
-The single change is adding `environment` and `project` tags to the server,
-which was created untagged.
+A plan today should read **No changes**. Anything else is drift and worth
+reading carefully.
 
 ## Secrets
 
-Nothing in this stack requires a password to plan or apply.
-`administrator_password` defaults to `null` and is in `ignore_changes`, so
-Terraform never reads, writes, or diffs it. The live value is held in Key Vault
-and rotated out of band; supply the variable only if the server must be
-recreated.
+Routine plans need no credential. `nl-prod-shared-kv/postgres-admin-password`
+holds the server admin password; nothing in this stack reads it, and no
+application connects as that role.
+
+The vault uses RBAC, not access policies, so subscription Owner alone does not
+grant data-plane access — `key_vault_role_assignments` grants it explicitly.
+
+A tenant's own connection string does **not** belong here. It belongs in that
+product's vault: HOV's is at `nl-prod-hov-kv/estate-database-url`, and
+convolens' tenant role password stays in `nl-prod-convolens-kv`.
+
+## Changing the Server
+
+There is a sharp edge worth knowing before you try.
+
+azurerm will not update `azurerm_postgresql_flexible_server` at all while
+`authentication.password_auth_enabled` is true unless the config supplies
+`administrator_password` — or the `administrator_password_wo` /
+`administrator_password_wo_version` pair. `ignore_changes` does not satisfy it;
+the check runs on the update request, not on the diff. Declaring the write-only
+pair wired to null variables does not work either: the provider then marks the
+server as needing an update on *every* plan, and that update cannot apply.
+
+So the config declares no password attribute at all, which is what keeps a
+routine plan clean. To make a genuine change to the server — SKU, storage,
+backup retention — for that run only:
+
+1. add `administrator_password_wo` and `administrator_password_wo_version = 1`
+   to the resource;
+2. supply the password from `nl-prod-shared-kv/postgres-admin-password` via
+   `TF_VAR_administrator_password`, never in a file;
+3. apply, then remove the pair again.
+
+Because it is write-only, the credential is not written to state. Be aware that
+this run also *sets* the admin password to the supplied value, so the vault must
+hold the current one.
+
+The two tags on the server were applied through the resource tags API for
+exactly this reason — a metadata change was not worth sending a production
+credential.
 
 ## Deliberate Non-Goals
 

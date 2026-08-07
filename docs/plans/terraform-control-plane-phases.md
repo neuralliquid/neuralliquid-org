@@ -147,14 +147,26 @@ was meant to remove, so it is org-owned. See
 [ADR 0002](../adr/0002-shared-data-plane-ownership.md).
 
 - Codify the server, resource group, firewall, server parameters and tenant
-  databases in `infra/terraform/shared-data` using import blocks. Done; the
-  first plan reads 7 to import, 1 to change (missing tags), 0 to destroy.
-- Apply the import so the resources stop being drift.
+  databases in `infra/terraform/shared-data` using import blocks. **Done**; the
+  first plan read 7 to import, 1 to change (missing tags), 0 to destroy.
+- Apply the import so the resources stop being drift. **Done** 2026-08-07; the
+  stack now plans clean.
 - Move the shared server admin credential out of `nl-prod-convolens-kv` into an
   org-owned vault in `nl-prod-shared-rg`, and each tenant's connection string
-  into that product's own vault.
+  into that product's own vault. **Done**; `nl-prod-shared-kv` holds
+  `postgres-admin-password`, `nl-prod-hov-kv` holds `estate-database-url`, and
+  convolens' vault keeps only convolens' secrets.
 - Close the default `PUBLIC` `CONNECT` grant on each tenant database, with both
-  product owners, since it touches both access paths.
+  product owners, since it touches both access paths. Outstanding.
+- Codify the operator grant on `nl-prod-hov-kv`. It was added by hand to move the
+  connection string, and HOV's security module only declares the deploy
+  principal's policy, so the grant is product-side drift until HOV records it.
+- Consider making convolens read its secrets from Key Vault. Its container app
+  holds `db-password`, `jwt-secret`, `acr-password` and
+  `appinsights-connection-string` inline with `keyVaultUrl: null`, so the vault
+  is a store of record that nothing reads and rotation has to happen twice. The
+  app already has a SystemAssigned identity, so the missing pieces are a vault
+  role assignment and `keyVaultUrl` secret references. Convolens-owned work.
 - Retire `nl-prod-convolens-pg` once both applications have been observed
   healthy on the shared server. It is the rollback path until then, and it is
   billing.

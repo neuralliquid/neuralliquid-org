@@ -77,10 +77,21 @@ simply switched off in favour of shared tenancy.
   `REVOKE CONNECT ON DATABASE <db> FROM PUBLIC` per database. It touches each
   product's own access path, so it belongs to the products, coordinated — not to
   a unilateral org apply.
-- The server admin credential is still held in `nl-prod-convolens-kv` alongside
-  both tenant passwords, which is a leftover from the migration and contradicts
-  this ADR. It belongs in an org-owned vault in `nl-prod-shared-rg`, and each
-  product's own connection string belongs in that product's vault. Outstanding.
+- Credentials now follow the same ownership line. `nl-prod-shared-kv` was created
+  in `nl-prod-shared-rg` for secrets belonging to the server itself, and holds
+  `postgres-admin-password`. HOV's connection string moved to
+  `nl-prod-hov-kv/estate-database-url`. `nl-prod-convolens-kv` keeps only
+  convolens' own secrets, including its tenant role password. Before this, one
+  product's vault was acting as the org credential store.
+- The new vault uses RBAC rather than access policies, so data-plane access is
+  granted explicitly per principal in `key_vault_role_assignments` rather than
+  inherited from subscription Owner.
+- **azurerm cannot update the server without its admin password**, whatever
+  `ignore_changes` says, and declaring the write-only credential pair against
+  null variables produces a permanent un-appliable diff. The config therefore
+  declares no password attribute, and a genuine server change is a deliberate
+  two-step documented in the stack README. This is a provider constraint, not a
+  preference; it is recorded so the next person does not rediscover it.
 
 ## Revisit Triggers
 
