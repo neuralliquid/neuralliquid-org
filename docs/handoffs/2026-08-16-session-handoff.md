@@ -5,7 +5,7 @@
 
 ---
 
-## 1. Complete 5-Track Portfolio Roadmap in Baton
+## 1. Complete 6-Track Portfolio Roadmap in Baton
 
 ```
                           ┌─────────────────────────────────────────────────────────┐
@@ -13,22 +13,23 @@
                           │   5debc28a-87e6: Portfolio Sovereignty & Restructuring  │
                           └────────────────────────────┬────────────────────────────┘
                                                        │
-         ┌───────────────────┬─────────────────────────┼─────────────────────────┬───────────────────┐
-         ▼                   ▼                         ▼                         ▼                   ▼
-┌─────────────────┐ ┌─────────────────┐       ┌─────────────────┐       ┌─────────────────┐ ┌─────────────────┐
-│ Track A: c9de5d │ │ Track B: ad65f8 │       │ Track C: 5d5983 │       │ Track D: 430c54 │ │ Track E: fde906 │
-│ Celladore Org   │ │ Sovereign Azure │       │ Nexamesh        │       │ NeuralLiquid    │ │ Capital Strategy│
-│ Spinout & Meta  │ │ Infra Migration │       │ DeepTech Mesh & │       │ Products &      │ │ & Ecosystem     │
-│ Relocation      │ │ (7 Subtasks)    │       │ Diligence Docs  │       │ Pilots (VV, etc)│ │ Partner Funnels │
-└─────────────────┘ └─────────────────┘       └─────────────────┘       └─────────────────┘ └─────────────────┘
+         ┌───────────────────┬─────────────────────────┼─────────────────────────┬───────────────────┬───────────────────┐
+         ▼                   ▼                         ▼                         ▼                   ▼                   ▼
+┌─────────────────┐ ┌─────────────────┐       ┌─────────────────┐       ┌─────────────────┐ ┌─────────────────┐ ┌─────────────────┐
+│ Track A: c9de5d │ │ Track B: ad65f8 │       │ Track C: 5d5983 │       │ Track D: 430c54 │ │ Track E: fde906 │ │ Track F: 180c14 │
+│ Celladore Org   │ │ Sovereign Azure │       │ Nexamesh        │       │ NeuralLiquid    │ │ Capital Strategy│ │ Phoenix Sovereign
+│ Spinout & Meta  │ │ Infra Migration │       │ DeepTech Mesh & │       │ Products &      │ │ & Ecosystem     │ │ Identity & Cross│
+│ Relocation      │ │ (7 Subtasks)    │       │ Diligence Docs  │       │ Pilots (VV, etc)│ │ Partner Funnels │ │ Repo OIDC IdP   │
+└─────────────────┘ └─────────────────┘       └─────────────────┘       └─────────────────┘ └─────────────────┘ └─────────────────┘
 ```
 
-### The 5 Operational Track Tasks
+### The 6 Operational Track Tasks
 1. **Track A (`c9de5d23-dd9f-42f3-b42a-fc4403ea9c05`)**: *Execute Celladore Org Spinout and org-meta Relocation from PhoenixVC* (5 checklist items).
 2. **Track B (`ad65f8ed-bab4-46eb-bdb4-3bea4bb2837e`)**: *Transfer Remaining NeuralLiquid Infra from Mystira Subscription to Dedicated NeuralLiquid Subscription* (7 structured subtasks `b38fab7c`, `15ef97d6`, `ab1e7ce6`, `cabf4190`, `56298d2c`, `8ae9035e`, `56b11b40`).
 3. **Track C (`5d5983e6-bc57-46ab-8d34-4623ea9d2f71`)**: *Track C: Nexamesh DeepTech Diligence, P2P Mesh & Investor Activation* (Docusaurus deploy, `docs.nexamesh.ai` DNS fix, pitch deck refresh).
 4. **Track D (`430c54cc-9c87-449a-9851-27f9183f265a`)**: *Track D: NeuralLiquid Flagship Products & Commercial Pilots (Convolens, VeritasVault, Omnipost, Cognitive Mesh, HOV)* (Commercial launches, VeritasVault web tier Vercel $\rightarrow$ Azure migration, Convolens quote pilot).
 5. **Track E (`fde90637-14ca-4a25-88d8-f8052de6f805`)**: *Track E: Dual-Track Capital Strategy & Ecosystem Partner Activation (MS ATO, Google, NVIDIA, AWS, VCs)* (Compute credits, Flapmax FAST, Grindstone, Google for Startups, VC roadshows).
+6. **Track F (`180c1449-a1c9-41c8-af78-a1f60deea160`)**: *Track F: Sovereign Phoenix Identity Provider & Cross-Repo OIDC Platform* (Extract OpenIddict core from `mystira-workspace` into dedicated repo, strip COPPA pipeline, Key Vault JWKS rotation, GitHub/Google/Entra ID federation, pilot integrations with Baton & HOV).
 
 ---
 
