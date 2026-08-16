@@ -1,11 +1,37 @@
 name: Convolens
+org_meta_ref: org-meta/registry/projects.yaml#convolens
+owner: neuralliquid
 repo: https://github.com/neuralliquid/convolens
+brand: convolens.neuralliquid.ai
 canonical_host: convolens.neuralliquid.ai
 current_dns_target: nl-prod-convolens-web.azurewebsites.net
 desired_dns_target: nl-prod-convolens-web.azurewebsites.net
-status: healthy
+status: active
+type: platform
+domain: [ai, messaging, analytics, enterprise]
+stack: [typescript, nextjs, express, pnpm, azure-appservice]
+description: "ConvoLens — AI-powered conversation analysis and summarization across messaging platforms."
+investability:
+  completion: 65
+  time_to_launch: "1mo"
+  market: M
+  moat: 5
+  internal: 6
+  external: 6
+  index: 5.8
+  realised: 5.8
+  tier: T3
+  confidence: P
+  scored: "2026-08-11"
+roadmap:
+  status: inprogress
+  current_milestone: B1 App Service plan reconciliation and WhatsApp quote pipeline
+  key_deliverables:
+    - DNS CNAME and SNI managed certificates live at convolens.neuralliquid.ai.
+    - REST baton integration live in production.
+    - External SaaS pricing page and reference customer onboarding (twinesandstraps).
+    - Secret rotation migration to Key Vault role assignments.
 notes:
   - DNS now CNAMEs to nl-prod-convolens-web.azurewebsites.net.
-  - Hostname binding and SNI managed certificate were applied on 2026-07-17.
-  - App Service plan was upgraded from F1 to B1 because managed certificates are not supported on Free/Shared.
-  - Product Terraform still needs to reconcile the B1 plan and custom-domain binding.
+  - Hostname binding and SNI managed certificate applied on 2026-07-17.
+  - App Service plan upgraded to B1 for managed certificate support.

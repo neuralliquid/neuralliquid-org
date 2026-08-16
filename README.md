@@ -9,11 +9,20 @@ NeuralLiquid product set:
 - Omnipost
 - Cognitive Mesh
 - House of Veritas
+- VeritasVault
+
+Under exploration / candidate for `celladore` developer org:
+- Sluice (Event streaming & queue routing)
+- Docket (Task ledger & state persistence)
+- Baton (Agent handoff protocol & lease orchestration)
+- Deck (Developer console & operator UI)
+- Nexamesh (P2P agent mesh & decentralized transport)
 
 Product repos continue to own application code and product-specific runtime
 infrastructure. This repo owns the shared control plane: DNS, GitHub/Azure
 organization policy, repo onboarding standards, product inventory, and reusable
-factory patterns.
+factory patterns. Upstream portfolio intelligence, cross-repo roadmaps, and the
+canonical project registry are maintained in [`org-meta`](../org-meta/README.md).
 
 ## Current Priority
 
@@ -74,7 +83,10 @@ products/
 
 - [ADR 0001: Control Plane and Product Repo Boundaries](docs/adr/0001-control-plane-boundaries.md)
 - [ADR 0002: Shared Data Plane Ownership](docs/adr/0002-shared-data-plane-ownership.md)
+- [ADR 0003: Celladore Org Split and Developer Stack](docs/adr/0003-celladore-org-split-exploration.md)
 - [Terraform Control Plane Phases](docs/plans/terraform-control-plane-phases.md)
+- [Funding & Ecosystem Strategy](docs/plans/funding-strategy-and-ecosystem-programs.md)
+- [Azure Subscription Migration Plan & Taskgraph](docs/plans/azure-subscription-migration-plan.md)
 - [Terraform CI and Apply](docs/runbooks/terraform-ci.md)
 - [Omnipost Terraform Migration Notes](docs/products/omnipost-terraform-migration.md)
 

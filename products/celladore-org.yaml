@@ -1,0 +1,26 @@
+name: celladore-org
+org_meta_ref: org-meta/registry/projects.yaml#celladore-org
+owner: celladore
+repo: https://github.com/celladore/celladore-org
+canonical_host: celladore.ai # candidate host
+status: exploration
+type: infrastructure
+domain: [infrastructure, org-management, developer-platform]
+stack: [terraform, hcl, github-actions]
+description: "Celladore organizational control plane, developer platform factory, and agentic stack governance."
+investability:
+  completion: 10
+  time_to_launch: "1mo"
+  market: L
+  moat: 6
+  internal: 8
+  external: 6
+  index: 6.2
+  realised: 2.5
+  tier: T2
+  confidence: E
+  scored: "2026-08-16"
+notes:
+  - Proposed organizational control plane for the Celladore developer and agent runtime stack.
+  - Standardizes DNS (celladore.ai/celladore.dev), package publishing (NPM, PyPI, Crates.io), shared Azure Container Apps environments, OIDC policies, and MCP tooling standards.
+  - Governs upstream developer tools: Sluice, Docket, Baton, Deck, and Retort.

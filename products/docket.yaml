@@ -1,0 +1,33 @@
+name: Docket
+org_meta_ref: org-meta/registry/projects.yaml#docket
+owner: phoenixvc # candidate transfer to celladore
+repo: https://github.com/phoenixvc/docket
+proposed_repo: https://github.com/celladore/docket
+canonical_host: docket.celladore.ai
+status: active
+type: analytics
+domain: [ai, analytics, cost-management, finops]
+stack: [typescript, javascript, nodejs]
+description: "AI cost operations — LLM spend tracking, FOCUS billing exports, and cost optimization."
+investability:
+  completion: 60
+  time_to_launch: "1mo"
+  market: M
+  moat: 2
+  internal: 4
+  external: 4
+  index: 4.3
+  realised: 4.6
+  tier: T3
+  confidence: E
+  scored: "2026-08-11"
+roadmap:
+  status: inprogress
+  current_milestone: Automated Azure billing blob ingestion & Sluice spend stream
+  key_deliverables:
+    - Genuinely deployed and healthy (/health 200, 48 commits/90d).
+    - Azure billing blob ingestion and GitHub Actions usage tracking.
+    - Sluice /spend/logs ingestion pipeline to replace markdown-only attribution.
+    - FOCUS format spend exports for enterprise FinOps.
+notes:
+  - Candidate for migration into dedicated Celladore organization alongside Sluice, Baton, and Deck.

@@ -1,9 +1,37 @@
 name: House of Veritas
+org_meta_ref: org-meta/registry/projects.yaml#house-of-veritas
+owner: neuralliquid
 repo: https://github.com/neuralliquid/house-of-veritas
+brand: hov.neuralliquid.ai
 canonical_host: hov.neuralliquid.ai
 current_dns_target: nl-prod-hov-app.azurewebsites.net
 desired_dns_target: nl-prod-hov-app.azurewebsites.net
-status: healthy
+status: active
+type: platform
+domain: [real-estate, finance, verification, proptech]
+stack: [nextjs, typescript, azure-functions-python, terraform, postgresql]
+description: "Estate management platform — Next.js + Azure Functions (Python) + Terraform."
+investability:
+  completion: 50
+  time_to_launch: "n/a"
+  market: M
+  moat: 3
+  internal: 5
+  external: 3
+  index: 4.3
+  realised: 4.6
+  tier: T4
+  confidence: P
+  scored: "2026-08-11"
+roadmap:
+  status: inprogress
+  current_milestone: Shared PostgreSQL consolidation and Key Vault operator policy
+  key_deliverables:
+    - Shared PostgreSQL server (nl-prod-shared-pg) consolidated and verified.
+    - Sluice gateway integration verified and live in production.
+    - Operator grant codified on nl-prod-hov-kv.
+    - Estate document verification and provenance workflow.
 notes:
-  - Live DNS and HTTPS are healthy.
-  - HOV handoff notes state DNS/custom-domain/cert were applied manually and should be reconciled into IaC.
+  - Transferred from JustAGhosT to neuralliquid on 2026-05-14.
+  - Sluice gateway wiring is built and Terraform-injected (SLUICE_BASE_URL and key set in production).
+  - DNS records managed by neuralliquid-org.
