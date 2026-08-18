@@ -1,8 +1,7 @@
 name: Docket
 org_meta_ref: org-meta/registry/projects.yaml#docket
-owner: phoenixvc # candidate transfer to celladore
-repo: https://github.com/phoenixvc/docket
-proposed_repo: https://github.com/celladore/docket
+owner: celladore
+repo: https://github.com/celladore/docket
 canonical_host: docket.celladore.ai
 status: active
 type: analytics

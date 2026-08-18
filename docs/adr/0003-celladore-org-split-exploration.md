@@ -6,7 +6,7 @@ Proposed / Under Exploration
 
 ## Context
 
-The portfolio architecture defined in [`org-meta`](file:///C:/Users/smitj/repos/org-meta/README.md) (the authoritative intelligence and governance layer for the entire organization portfolio) categorizes systems across four architectural layers:
+The portfolio architecture defined in [`org-meta`](https://github.com/JustAGhosT/org-meta/blob/main/README.md) (the authoritative intelligence and governance layer for the entire organization portfolio) categorizes systems across four architectural layers:
 
 * **Layer 1 — Intelligence & Governance**: `org-meta`, `mcp-org`, `baton`
 * **Layer 2 — AI Infrastructure**: `sluice`, `docket`, `cognitive-mesh`, `retort`

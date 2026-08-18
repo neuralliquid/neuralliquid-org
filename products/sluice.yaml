@@ -1,10 +1,9 @@
 name: Sluice
 org_meta_ref: org-meta/registry/projects.yaml#sluice
-owner: phoenixvc # candidate transfer to celladore
-repo: https://github.com/phoenixvc/sluice
-proposed_repo: https://github.com/celladore/sluice
+owner: celladore
+repo: https://github.com/celladore/sluice
 canonical_host: sluice.celladore.ai
-status: active # active in portfolio, exploration for celladore transfer
+status: active
 type: gateway
 domain: [ai, infrastructure, gateway]
 stack: [python, terraform, litellm, azure-container-apps]
