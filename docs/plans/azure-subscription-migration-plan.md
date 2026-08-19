@@ -65,6 +65,181 @@ flowchart TD
   - Update `infra/terraform/dns/main.tf` to point TXT `asuid.*` records to the new subscription resources.
   - Apply DNS updates via `neuralliquid-org` Terraform pipeline.
 
+#### Execution log, 2026-08-19
+
+Scope grew beyond the original description above: the `neuralliquid-org`
+Terraform pipeline for this stack cannot run at all — its `backend.tf` still
+targets remote state storage (`nlorgtfstate`) in the legacy, inaccessible
+subscription, so this was executed via `az` CLI directly instead (matching
+how `neuralliquid-web-prod` was provisioned earlier in this same migration),
+with Terraform updated in parallel (`infra/terraform/dns/{main,imports,variables}.tf`)
+so a future `terraform apply` adopts these records instead of erroring once
+the state-backend bootstrap (Subtask 2) unblocks this stack.
+
+What was done:
+- Every live record in the old zone was captured by direct DNS query — not
+  copied from Terraform or `docs/inventory/dns.md`, both of which had drifted
+  (see `docs/inventory/dns.md` for the Omnipost and `login.hov` corrections
+  this surfaced).
+- A new `neuralliquid.ai` zone was created in `neuralliquid-sub`
+  (resource group `nl-global-shared-rg`), with all 21 record sets recreated:
+  the 7 product CNAMEs + 7 `asuid.*` TXT validations, apex `@` A/MX/TXT, and
+  `www`/`email` CNAMEs (the last five previously unmanaged by any Terraform).
+- Every record was re-verified by querying the new zone's own nameservers
+  directly, not just trusted from the `az` response.
+- The old zone (`mys-global-shared-rg`, subscription
+  `bb4e3882-2079-4bab-8974-611bc0b8bb58`) is untouched and still authoritative
+  — nothing here has gone live yet.
+
+**What's still pending — the NS delegation cutover.** This is a registrar
+action at Dynadot (the domain's registrar, confirmed via RDAP) and requires
+the domain owner's login; it cannot be executed from this session. When ready,
+replace the domain's nameservers with:
+
+```
+ns1-02.azure-dns.com
+ns2-02.azure-dns.net
+ns3-02.azure-dns.org
+ns4-02.azure-dns.info
+```
+
+At Dynadot: **My Domains → neuralliquid.ai → Nameservers**, switch off the
+default/parked nameservers to "Custom," and enter the four values above.
+Propagation is typically minutes to a few hours; DNS caches elsewhere can take
+up to 24-48h to fully clear. `client transfer prohibited` (the standard
+registrar lock shown in RDAP) does not block this — it only blocks domain
+*transfers*, not nameserver edits. No DNSSEC is active on the domain
+(`secureDNS.delegationSigned: false` in RDAP), so there's no DS-record
+coordination needed either.
+
+After the flip, verify all five hostnames plus mail before considering this
+subtask closed — `nslookup <host> ns1-02.azure-dns.com` against the new zone
+directly is how every record above was already validated once; the same
+checks against the public resolvers after cutover close the loop.
+
+#### Decision update, 2026-08-19 (later same day) — target changed to Cloudflare
+
+**The Azure-DNS cutover above is paused, not executed.** User decision: the
+domain should not delegate to Azure DNS at all — the whole reason this
+migration exists is that the *old* zone got orphaned when a subscription
+became inaccessible, and pointing the registrar at Azure DNS again (even a
+subscription this org currently controls) keeps that same failure mode live.
+Delegating to Cloudflare instead decouples `neuralliquid.ai`'s DNS from any
+Azure subscription entirely, so a repeat of today's root cause becomes
+structurally impossible, not just currently-not-happening.
+
+**What this changes:**
+- The registrar cutover target is Cloudflare's nameservers, not the four
+  `azure-dns.*` values above. Those values are no longer the plan — do not
+  use them.
+- The `neuralliquid-sub` zone built and verified earlier today
+  (`nl-global-shared-rg`) is **not wasted** — it's the authoritative,
+  live-verified source of truth for all 21 records, now being copied to
+  Cloudflare instead of becoming the delegation target itself. Keep it in
+  place as a secondary reference/rollback source until Cloudflare is live
+  and confirmed stable, then it's a decommission candidate (Subtask 7-style
+  cleanup, not urgent).
+- PR #7 (`neuralliquid-org`, `azurerm_dns_*` Terraform + import blocks) is
+  **on hold, not merged** — it's still correct as a record of the verified
+  Azure zone, but merging it implies Azure DNS is the ongoing IaC target,
+  which is no longer the plan. Revisit once the Cloudflare stack exists:
+  either merge as-is (Azure zone kept as documented rollback infra) or close
+  once Cloudflare is confirmed live and the Azure zone is torn down.
+
+**What's needed next (blocking, user-only — account creation and API tokens
+are both outside what an agent should do on someone's behalf):**
+1. Create/sign into a Cloudflare account and add `neuralliquid.ai` as a site.
+   Skip Cloudflare's automatic DNS scan/import — it would scan whatever's
+   *currently* authoritative (the old, drift-prone Dynadot-default zone),
+   not the clean 21-record set already captured in this repo. Records should
+   be entered from `infra/terraform/dns/main.tf` / this document instead.
+2. Generate a scoped Cloudflare API token (Zone:DNS:Edit, scoped to just this
+   zone) for Terraform to use, once a `cloudflare`-provider stack exists.
+3. Cloudflare's proxy ("orange cloud") must stay **off (DNS only, grey
+   cloud)** for every one of these records — the Static Web App and
+   Container App hosts rely on direct DNS resolution for
+   `dns-txt-token`/`cname-delegation` validation and Azure-managed TLS;
+   proxying breaks that validation silently. MX/SPF/apex TXT can't be
+   proxied by Cloudflare anyway (not supported for those types), so no
+   action needed there — just don't accidentally enable it on the A/CNAME
+   records.
+
+Once the Cloudflare zone exists with a token available, the next steps are:
+write a `cloudflare`-provider Terraform stack seeded from the same 21-record
+set, apply it, then do the single Dynadot NS flip straight to Cloudflare
+(skipping Azure DNS as an intermediate hop entirely).
+
+#### Cloudflare zone built and verified, 2026-08-19 (later still, same day)
+
+The Cloudflare zone was populated via BIND zone-file import (all 22
+individual records — Azure's 21 record-sets, with the 2-value MX and
+3-value apex TXT set expanding to individual rows in Cloudflare's flat
+model) and every record was re-verified directly against **both** of
+Cloudflare's assigned nameservers for this zone
+(`jack.ns.cloudflare.com`, `laylah.ns.cloudflare.com`) — same rigor as the
+Azure zone, all values matching `infra/terraform/dns/main.tf` exactly.
+Every A/CNAME record confirmed **DNS only** (not proxied) as required for
+Azure's domain validation and managed-TLS renewal — see the proxy warning
+above; declined Cloudflare's onboarding suggestion to proxy any record for
+DDoS/CDN benefits, since all origins are Azure PaaS services where that
+carries real renewal risk for marginal benefit right now.
+
+**This supersedes the `azure-dns.*` nameservers earlier in this section.**
+The actual cutover target is:
+
+```
+jack.ns.cloudflare.com
+laylah.ns.cloudflare.com
+```
+
+At Dynadot: **My Domains → neuralliquid.ai → Nameservers**, switch to
+"Custom," and enter the two values above (replacing whatever's there now —
+do not add the Azure values, they were never delegated to). Same caveats as
+before still apply: `client transfer prohibited` doesn't block this (NS
+edits aren't transfers), and there's no DNSSEC to coordinate
+(`secureDNS.delegationSigned: false`). This is still a registrar action
+only the domain owner can perform.
+
+After the flip, verify all nine hostnames (7 product + apex + www) plus
+mail before considering Subtask 3 closed, same method as always —
+`nslookup <host> jack.ns.cloudflare.com` directly, then the same checks
+against public resolvers once propagation clears.
+
+#### Subtask 3 closed, 2026-08-19 (cutover complete)
+
+The Dynadot nameserver change was made but not initially saved (form was
+filled in, "Save Name Server" hadn't been clicked) — the `.ai` registry
+still showed the prior delegation (`ns*-08.azure-dns.*`, the legacy zone's
+real nameservers — a third, previously-unrecorded Azure zone, distinct
+from the `-02` zone built earlier today) when queried directly. After
+actually saving, a direct query against the `.ai` registry
+(`v0n0.nic.ai`) confirmed `jack`/`laylah.ns.cloudflare.com` within
+minutes, and both Google's and Cloudflare's public resolvers had already
+picked it up on the next check — no multi-hour wait needed this time.
+
+Full end-to-end verification against a public resolver (8.8.8.8) after
+cutover: apex A, apex MX (both), and all 9 hostnames (7 product + apex +
+www) resolve through to their correct real targets. `email` CNAME
+resolves correctly too. `curl -I https://neuralliquid.ai` and
+`https://www.neuralliquid.ai` both return `200 OK` with valid TLS —
+confirming the Static Web App's custom-domain binding (`dns-txt-token`
+apex, `cname-delegation` www) survived the DNS host change without
+re-validation issues, which was an open question until now.
+
+**neuralliquid.ai is now fully live on Cloudflare DNS.** Both Azure zones
+(the legacy one at `ns*-08.azure-dns.*` and the `neuralliquid-sub` one
+built earlier today at `ns*-02.azure-dns.*`) are orphaned but intentionally
+left in place as rollback references — decommissioning either is a
+follow-up, not urgent, and out of scope for this subtask.
+
+**Not yet done, still open:** DKIM/DMARC records for Mailgun (pre-existing
+gap, documented in `docs/inventory/dns.md`, not part of this migration's
+scope); a `cloudflare`-provider Terraform stack (all of today's Cloudflare
+work was done via zone-file import + dashboard, not IaC) — the current
+Azure Terraform in PR #7 is being kept/merged as the verified
+source-of-truth record set and rollback documentation, not as the live
+management path.
+
 ### Subtask 4: Shared Data Plane & Database Migration (`cabf4190-aefc-499c-a690-5d9b504bcaa6`)
 * **Objective**: Reconstitute `nl-prod-shared-pg` and Key Vaults.
 * **Scope**:

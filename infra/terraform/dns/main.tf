@@ -36,8 +36,15 @@ locals {
       ttl    = 300
     }
     hov_login = {
-      name   = "login.hov"
-      record = "mys-dev-id-webapi.azurewebsites.net"
+      name = "login.hov"
+      # 2026-08-19: corrected to match live reality, confirmed by direct
+      # nslookup against the zone's authoritative nameservers. The old value
+      # (mys-dev-id-webapi.azurewebsites.net, a dev App Service) was stale —
+      # commit 5abc065 ("route HOV login to Mystira Identity") repointed this
+      # host at a Container App and this file was never updated to match, and
+      # no import block existed for it either (see imports.tf). Do not revert
+      # this toward the old value; live is correct, this file was wrong.
+      record = "mys-prod-identity-api.politeocean-781513ae.southafricanorth.azurecontainerapps.io"
       ttl    = 300
     }
   }
@@ -102,4 +109,79 @@ resource "azurerm_dns_txt_record" "app_service_validation" {
   record {
     value = each.value.verification_id
   }
+}
+
+# Apex-level records. Added 2026-08-19 during the org-wide DNS zone
+# migration (docs/plans/azure-subscription-migration-plan.md, Track B) —
+# these existed as unmanaged/manual records in the legacy zone and were
+# never previously represented in this module. Values were captured live
+# via nslookup immediately before the new zone was built, so this is the
+# first time they're IaC-owned rather than a design change.
+
+resource "azurerm_dns_a_record" "apex" {
+  name                = "@"
+  zone_name           = data.azurerm_dns_zone.neuralliquid.name
+  resource_group_name = var.dns_zone_resource_group
+  ttl                 = 3600
+  # Azure Static Web Apps apex custom-domain front-door IP for nl-prod-web-swa
+  # (infra/terraform/web) — not tied to a particular subscription, safe to
+  # carry forward verbatim. This is a DIFFERENT Static Web App than
+  # neuralliquid-web-prod; see PRD open decision on apex-vs-subdomain.
+  records = ["9.163.40.246"]
+}
+
+resource "azurerm_dns_mx_record" "apex" {
+  name                = "@"
+  zone_name           = data.azurerm_dns_zone.neuralliquid.name
+  resource_group_name = var.dns_zone_resource_group
+  ttl                 = 3600
+
+  record {
+    preference = 10
+    exchange   = "mxa.eu.mailgun.org"
+  }
+  record {
+    preference = 10
+    exchange   = "mxb.eu.mailgun.org"
+  }
+}
+
+resource "azurerm_dns_txt_record" "apex" {
+  name                = "@"
+  zone_name           = data.azurerm_dns_zone.neuralliquid.name
+  resource_group_name = var.dns_zone_resource_group
+  ttl                 = 3600
+
+  # Static Web App apex custom-domain ownership token (dns-txt-token
+  # validation, see infra/terraform/web/main.tf azurerm_static_web_app_custom_domain.apex).
+  record {
+    value = "_t8jaqjnoysen3xbm27vutpyb5jp6vl7"
+  }
+  # SPF for Mailgun.
+  record {
+    value = "v=spf1 include:mailgun.org ~all"
+  }
+  # OpenAI domain ownership verification.
+  record {
+    value = "openai-domain-verification=dv-0edZSJrfP6PSNxukfE8qSj8y"
+  }
+}
+
+resource "azurerm_dns_cname_record" "www" {
+  name                = "www"
+  zone_name           = data.azurerm_dns_zone.neuralliquid.name
+  resource_group_name = var.dns_zone_resource_group
+  ttl                 = 3600
+  # nl-prod-web-swa's default hostname (infra/terraform/web) — cname-delegation
+  # validated custom domain, same Static Web App the apex A record serves.
+  record = "jolly-beach-099205503.7.azurestaticapps.net"
+}
+
+resource "azurerm_dns_cname_record" "email" {
+  name                = "email"
+  zone_name           = data.azurerm_dns_zone.neuralliquid.name
+  resource_group_name = var.dns_zone_resource_group
+  ttl                 = 3600
+  # Mailgun tracking/open-tracking subdomain.
+  record = "eu.mailgun.org"
 }

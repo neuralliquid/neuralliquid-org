@@ -1,12 +1,36 @@
 # DNS Terraform
 
-This stack owns NeuralLiquid product DNS records in the existing Azure DNS zone:
+This stack owns NeuralLiquid product DNS records in the Azure DNS zone:
 
 - zone: `neuralliquid.ai`
-- resource group: `mys-global-shared-rg`
-- subscription: `bb4e3882-2079-4bab-8974-611bc0b8bb58`
+- resource group: `nl-global-shared-rg`
+- subscription: `5a95ddee-dd63-441a-8306-c8b0803dcdd4` (neuralliquid-sub)
 
-The zone itself is read as a data source. Product records are managed here.
+**2026-08-19: zone migrated.** The zone was recreated fresh in `neuralliquid-sub`
+during the org-wide DNS migration
+(`docs/plans/azure-subscription-migration-plan.md`, Track B), populated by
+capturing every live record via direct DNS queries (not from this file, which
+had drifted — see the `login.hov` note below) and recreating them via `az`
+CLI, then validated by querying the new zone's own nameservers directly. The
+registrar's NS delegation cutover to the new zone is a separate step (requires
+the domain owner's registrar login) — until that happens the *old* zone
+(`mys-global-shared-rg`, subscription `bb4e3882-2079-4bab-8974-611bc0b8bb58`)
+remains authoritative and live. That old zone is left in place, orphaned but
+not deleted, as the rollback path — this repo/subscription never had access
+to delete it anyway.
+
+The zone itself is still read as a data source, not owned as a Terraform
+resource — carried forward as-is from the pre-migration design. Worth
+revisiting now that the zone lives somewhere this org actually controls.
+
+**Superseded, 2026-08-19: the registrar delegates to Cloudflare, not this
+zone.** Decision: avoid re-creating Azure-subscription lock-in on DNS itself
+(see `docs/plans/azure-subscription-migration-plan.md`, Track B / Subtask 3)
+— confirmed live and verified end-to-end the same day. This zone and its
+Terraform remain as the verified source-of-truth record set this migration
+was built from, and as a rollback/reference copy — not the live delegation
+target, and not expected to become one. Merging the PR carrying this stack
+documents that history; it does not make Azure DNS authoritative.
 
 ## Current Scope
 
@@ -16,9 +40,15 @@ The zone itself is read as a data source. Product records are managed here.
 - `control.cognitive-mesh.neuralliquid.ai`
 - `api.cognitivemesh.neuralliquid.ai`
 - `hov.neuralliquid.ai`
-- `login.hov.neuralliquid.ai` (HOV-branded browser entrypoint to the current
-  Mystira dev Identity App Service)
+- `login.hov.neuralliquid.ai` (HOV-branded browser entrypoint to Mystira
+  Identity — a Container App, not an App Service; this file's `record` value
+  was stale/wrong from commit 5abc065 until 2026-08-19, see main.tf)
 - App Service `asuid.*` TXT validation records for bound hosts
+- Apex `@` A/MX/TXT records and `www`/`email` CNAMEs — newly IaC-owned as of
+  the 2026-08-19 migration; previously unmanaged by any Terraform. The apex
+  A/`www` CNAME point at `nl-prod-web-swa` (`infra/terraform/web`), a
+  different Static Web App than `neuralliquid-web-prod` — see that repo's
+  PRD open decision on apex-vs-subdomain before assuming these should change.
 
 `login.hov` uses the dedicated
 `mystira_identity_app_service_verification_id` input for its `asuid` TXT value;
