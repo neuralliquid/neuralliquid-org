@@ -14,13 +14,20 @@ Terraform for the live Cloudflare zone" logged against that same subtask in
 Baton (`46f462e1`).
 
 **Status as of 2026-08-19: written, not applied, not import-verified.**
-`main.tf` declares the same 22 records documented in
-`docs/inventory/dns.md` and `infra/terraform/dns/main.tf` (the Azure
-counterpart, kept as a rollback reference — see that stack's README for why
-Azure DNS is not the live target). This stack has **not** been run against
-the real API — writing it did not require or use Cloudflare credentials,
-only the record values already captured in this repo. `imports.tf` does not
-exist yet; see "Import" below before ever running `apply` here.
+`main.tf` declares the 22 records *as documented in* `docs/inventory/dns.md`
+and `infra/terraform/dns/main.tf` (the Azure counterpart, kept as a
+rollback reference — see that stack's README for why Azure DNS is not the
+live target) — this set has **not** been reconciled against the live
+Cloudflare zone. This stack has **not** been run against the real API —
+writing it did not require or use Cloudflare credentials, only the record
+values already captured in this repo. `imports.tf` does not exist yet; see
+"Import" below before ever running `apply` here. `scripts/generate-imports.sh`'s
+22-match check *is* the reconciliation step — run it first and treat a
+`# UNMATCHED` line or a match count under 22 as a signal to fix `main.tf`,
+not the script. `login.hov` is the one host with a documented history of
+drifting between what's declared and what's live (see the comment on
+`cloudflare_dns_record.product["hov_login"]` in `main.tf`) — check it
+first if the count comes up short.
 
 ## Current Scope
 

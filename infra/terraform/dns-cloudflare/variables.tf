@@ -24,7 +24,7 @@ variable "app_service_verification_id" {
 
 variable "mystira_identity_app_service_verification_id" {
   type        = string
-  description = "Independently sourced custom-domain verification ID for the Mystira Identity App Service used by login.hov."
+  description = "Custom-domain verification ID for the Mystira Identity App Service used by login.hov. Its default is byte-identical to app_service_verification_id's — unverified whether that's because both App Services genuinely share one verification ID, or a copy-paste this stack inherited from infra/terraform/dns. Kept as a separate variable so the two can diverge without a code change once verified; do not assume the shared default is correct without checking the live TXT record."
   default     = "05B038A75C9A9151C1E0ECF5F652F255707230C7408A56A6686F15CA9CDA6872"
 
   validation {
