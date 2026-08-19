@@ -1,5 +1,5 @@
 variable "subscription_id" {
-  type = string
+  type        = string
   description = <<-EOT
     Azure subscription that contains the neuralliquid.ai DNS zone.
     2026-08-19: points at neuralliquid-sub, the zone recreated there during
