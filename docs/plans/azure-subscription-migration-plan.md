@@ -65,6 +65,58 @@ flowchart TD
   - Update `infra/terraform/dns/main.tf` to point TXT `asuid.*` records to the new subscription resources.
   - Apply DNS updates via `neuralliquid-org` Terraform pipeline.
 
+#### Execution log, 2026-08-19
+
+Scope grew beyond the original description above: the `neuralliquid-org`
+Terraform pipeline for this stack cannot run at all — its `backend.tf` still
+targets remote state storage (`nlorgtfstate`) in the legacy, inaccessible
+subscription, so this was executed via `az` CLI directly instead (matching
+how `neuralliquid-web-prod` was provisioned earlier in this same migration),
+with Terraform updated in parallel (`infra/terraform/dns/{main,imports,variables}.tf`)
+so a future `terraform apply` adopts these records instead of erroring once
+the state-backend bootstrap (Subtask 2) unblocks this stack.
+
+What was done:
+- Every live record in the old zone was captured by direct DNS query — not
+  copied from Terraform or `docs/inventory/dns.md`, both of which had drifted
+  (see `docs/inventory/dns.md` for the Omnipost and `login.hov` corrections
+  this surfaced).
+- A new `neuralliquid.ai` zone was created in `neuralliquid-sub`
+  (resource group `nl-global-shared-rg`), with all 21 record sets recreated:
+  the 7 product CNAMEs + 7 `asuid.*` TXT validations, apex `@` A/MX/TXT, and
+  `www`/`email` CNAMEs (the last five previously unmanaged by any Terraform).
+- Every record was re-verified by querying the new zone's own nameservers
+  directly, not just trusted from the `az` response.
+- The old zone (`mys-global-shared-rg`, subscription
+  `bb4e3882-2079-4bab-8974-611bc0b8bb58`) is untouched and still authoritative
+  — nothing here has gone live yet.
+
+**What's still pending — the NS delegation cutover.** This is a registrar
+action at Dynadot (the domain's registrar, confirmed via RDAP) and requires
+the domain owner's login; it cannot be executed from this session. When ready,
+replace the domain's nameservers with:
+
+```
+ns1-02.azure-dns.com
+ns2-02.azure-dns.net
+ns3-02.azure-dns.org
+ns4-02.azure-dns.info
+```
+
+At Dynadot: **My Domains → neuralliquid.ai → Nameservers**, switch off the
+default/parked nameservers to "Custom," and enter the four values above.
+Propagation is typically minutes to a few hours; DNS caches elsewhere can take
+up to 24-48h to fully clear. `client transfer prohibited` (the standard
+registrar lock shown in RDAP) does not block this — it only blocks domain
+*transfers*, not nameserver edits. No DNSSEC is active on the domain
+(`secureDNS.delegationSigned: false` in RDAP), so there's no DS-record
+coordination needed either.
+
+After the flip, verify all five hostnames plus mail before considering this
+subtask closed — `nslookup <host> ns1-02.azure-dns.com` against the new zone
+directly is how every record above was already validated once; the same
+checks against the public resolvers after cutover close the loop.
+
 ### Subtask 4: Shared Data Plane & Database Migration (`cabf4190-aefc-499c-a690-5d9b504bcaa6`)
 * **Objective**: Reconstitute `nl-prod-shared-pg` and Key Vaults.
 * **Scope**:
