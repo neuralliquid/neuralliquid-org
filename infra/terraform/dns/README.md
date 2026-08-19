@@ -23,6 +23,15 @@ The zone itself is still read as a data source, not owned as a Terraform
 resource — carried forward as-is from the pre-migration design. Worth
 revisiting now that the zone lives somewhere this org actually controls.
 
+**Paused, 2026-08-19 (later same day): the registrar will not delegate to
+this zone.** Decision: avoid re-creating Azure-subscription lock-in on DNS
+itself (see `docs/plans/azure-subscription-migration-plan.md`, Track B /
+Subtask 3 decision update) — the target is Cloudflare instead. This zone and
+its Terraform stay as the verified source-of-truth record set and a
+rollback/reference copy, not the live delegation target. Do not merge the
+PR carrying this stack under the assumption it makes Azure DNS authoritative
+— it won't be.
+
 ## Current Scope
 
 - `convolens.neuralliquid.ai`
