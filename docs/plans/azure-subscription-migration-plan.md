@@ -205,6 +205,41 @@ mail before considering Subtask 3 closed, same method as always —
 `nslookup <host> jack.ns.cloudflare.com` directly, then the same checks
 against public resolvers once propagation clears.
 
+#### Subtask 3 closed, 2026-08-19 (cutover complete)
+
+The Dynadot nameserver change was made but not initially saved (form was
+filled in, "Save Name Server" hadn't been clicked) — the `.ai` registry
+still showed the prior delegation (`ns*-08.azure-dns.*`, the legacy zone's
+real nameservers — a third, previously-unrecorded Azure zone, distinct
+from the `-02` zone built earlier today) when queried directly. After
+actually saving, a direct query against the `.ai` registry
+(`v0n0.nic.ai`) confirmed `jack`/`laylah.ns.cloudflare.com` within
+minutes, and both Google's and Cloudflare's public resolvers had already
+picked it up on the next check — no multi-hour wait needed this time.
+
+Full end-to-end verification against a public resolver (8.8.8.8) after
+cutover: apex A, apex MX (both), and all 9 hostnames (7 product + apex +
+www) resolve through to their correct real targets. `email` CNAME
+resolves correctly too. `curl -I https://neuralliquid.ai` and
+`https://www.neuralliquid.ai` both return `200 OK` with valid TLS —
+confirming the Static Web App's custom-domain binding (`dns-txt-token`
+apex, `cname-delegation` www) survived the DNS host change without
+re-validation issues, which was an open question until now.
+
+**neuralliquid.ai is now fully live on Cloudflare DNS.** Both Azure zones
+(the legacy one at `ns*-08.azure-dns.*` and the `neuralliquid-sub` one
+built earlier today at `ns*-02.azure-dns.*`) are orphaned but intentionally
+left in place as rollback references — decommissioning either is a
+follow-up, not urgent, and out of scope for this subtask.
+
+**Not yet done, still open:** DKIM/DMARC records for Mailgun (pre-existing
+gap, documented in `docs/inventory/dns.md`, not part of this migration's
+scope); a `cloudflare`-provider Terraform stack (all of today's Cloudflare
+work was done via zone-file import + dashboard, not IaC) — the current
+Azure Terraform in PR #7 is being kept/merged as the verified
+source-of-truth record set and rollback documentation, not as the live
+management path.
+
 ### Subtask 4: Shared Data Plane & Database Migration (`cabf4190-aefc-499c-a690-5d9b504bcaa6`)
 * **Objective**: Reconstitute `nl-prod-shared-pg` and Key Vaults.
 * **Scope**:

@@ -23,14 +23,14 @@ The zone itself is still read as a data source, not owned as a Terraform
 resource — carried forward as-is from the pre-migration design. Worth
 revisiting now that the zone lives somewhere this org actually controls.
 
-**Paused, 2026-08-19 (later same day): the registrar will not delegate to
-this zone.** Decision: avoid re-creating Azure-subscription lock-in on DNS
-itself (see `docs/plans/azure-subscription-migration-plan.md`, Track B /
-Subtask 3 decision update) — the target is Cloudflare instead. This zone and
-its Terraform stay as the verified source-of-truth record set and a
-rollback/reference copy, not the live delegation target. Do not merge the
-PR carrying this stack under the assumption it makes Azure DNS authoritative
-— it won't be.
+**Superseded, 2026-08-19: the registrar delegates to Cloudflare, not this
+zone.** Decision: avoid re-creating Azure-subscription lock-in on DNS itself
+(see `docs/plans/azure-subscription-migration-plan.md`, Track B / Subtask 3)
+— confirmed live and verified end-to-end the same day. This zone and its
+Terraform remain as the verified source-of-truth record set this migration
+was built from, and as a rollback/reference copy — not the live delegation
+target, and not expected to become one. Merging the PR carrying this stack
+documents that history; it does not make Azure DNS authoritative.
 
 ## Current Scope
 

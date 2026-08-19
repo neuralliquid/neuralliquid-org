@@ -1,31 +1,35 @@
 # DNS Inventory
 
-Authoritative zone: `neuralliquid.ai`
+Authoritative zone: `neuralliquid.ai`, hosted on **Cloudflare** (nameservers
+`jack.ns.cloudflare.com` / `laylah.ns.cloudflare.com`) as of 2026-08-19.
 
-**2026-08-19: zone migrated.** A fresh copy of the zone was built in
-`neuralliquid-sub` (resource group `nl-global-shared-rg`, subscription
-`5a95ddee-dd63-441a-8306-c8b0803dcdd4`) as part of the org-wide DNS migration
-(`docs/plans/azure-subscription-migration-plan.md`, Track B). It was
-populated by querying every live record directly (not from this file or from
-Terraform, both of which had drifted from reality — see the Omnipost and
-`login.hov` corrections below) and validated by querying the new zone's own
-nameservers. It is **not yet live** — the registrar (Dynadot) still delegates
-to the old zone's nameservers, and that flip requires the domain owner's
-registrar login, so it isn't something this repo/session can execute. Until
-that NS cutover happens, the record below is still true and still
-authoritative:
+**2026-08-19: migrated off Azure DNS entirely, not just to a new subscription.**
+Originally the plan was to rebuild the zone in `neuralliquid-sub` (resource
+group `nl-global-shared-rg`) and cut the registrar over to that — that zone
+was built and fully verified, but the cutover target changed mid-migration:
+delegating to Azure DNS again (even a subscription this org controls) was
+judged to preserve the exact failure mode that caused this migration in the
+first place (a subscription becoming inaccessible orphans the zone). Instead
+the registrar now delegates straight to Cloudflare, populated from the same
+live-verified 21-record set (see
+`docs/plans/azure-subscription-migration-plan.md`, Track B / Subtask 3 for
+the full execution log). Cutover confirmed end-to-end: all hostnames resolve
+correctly via public resolvers, and both `neuralliquid.ai` and
+`www.neuralliquid.ai` serve `200 OK` with valid TLS, confirming the Static
+Web App custom-domain binding survived the DNS host change.
 
+Both prior Azure zones are orphaned but left in place as rollback
+references, not decommissioned yet (not urgent):
+- `nl-global-shared-rg`, subscription `5a95ddee-dd63-441a-8306-c8b0803dcdd4`
+  (neuralliquid-sub) — the zone built during this migration, ultimately not
+  used as the live delegation target.
 - `mys-global-shared-rg`, subscription `bb4e3882-2079-4bab-8974-611bc0b8bb58`
-  (legacy, inaccessible from every Azure login checked so far)
+  (legacy, inaccessible from every Azure login checked so far) — the
+  original zone this migration moved away from.
 
-That old zone is left in place, orphaned but not deleted, as the rollback
-path if the cutover needs to be reversed — this repo/subscription never had
-delete access to it anyway.
-
-This should be re-validated live before trusting it, same caution as before:
-local Azure CLI token acquisition to the *old* subscription was failing on
-2026-07-17 with an MSAL token cache decryption error, and remains inaccessible
-as of 2026-08-19.
+This should be re-validated live before trusting it blindly, same caution as
+always: verify against Cloudflare's dashboard or a direct `nslookup` against
+its nameservers rather than assuming this file stays current.
 
 ## Product Hosts
 
