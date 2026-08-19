@@ -169,6 +169,42 @@ write a `cloudflare`-provider Terraform stack seeded from the same 21-record
 set, apply it, then do the single Dynadot NS flip straight to Cloudflare
 (skipping Azure DNS as an intermediate hop entirely).
 
+#### Cloudflare zone built and verified, 2026-08-19 (later still, same day)
+
+The Cloudflare zone was populated via BIND zone-file import (all 22
+individual records — Azure's 21 record-sets, with the 2-value MX and
+3-value apex TXT set expanding to individual rows in Cloudflare's flat
+model) and every record was re-verified directly against **both** of
+Cloudflare's assigned nameservers for this zone
+(`jack.ns.cloudflare.com`, `laylah.ns.cloudflare.com`) — same rigor as the
+Azure zone, all values matching `infra/terraform/dns/main.tf` exactly.
+Every A/CNAME record confirmed **DNS only** (not proxied) as required for
+Azure's domain validation and managed-TLS renewal — see the proxy warning
+above; declined Cloudflare's onboarding suggestion to proxy any record for
+DDoS/CDN benefits, since all origins are Azure PaaS services where that
+carries real renewal risk for marginal benefit right now.
+
+**This supersedes the `azure-dns.*` nameservers earlier in this section.**
+The actual cutover target is:
+
+```
+jack.ns.cloudflare.com
+laylah.ns.cloudflare.com
+```
+
+At Dynadot: **My Domains → neuralliquid.ai → Nameservers**, switch to
+"Custom," and enter the two values above (replacing whatever's there now —
+do not add the Azure values, they were never delegated to). Same caveats as
+before still apply: `client transfer prohibited` doesn't block this (NS
+edits aren't transfers), and there's no DNSSEC to coordinate
+(`secureDNS.delegationSigned: false`). This is still a registrar action
+only the domain owner can perform.
+
+After the flip, verify all nine hostnames (7 product + apex + www) plus
+mail before considering Subtask 3 closed, same method as always —
+`nslookup <host> jack.ns.cloudflare.com` directly, then the same checks
+against public resolvers once propagation clears.
+
 ### Subtask 4: Shared Data Plane & Database Migration (`cabf4190-aefc-499c-a690-5d9b504bcaa6`)
 * **Objective**: Reconstitute `nl-prod-shared-pg` and Key Vaults.
 * **Scope**:
