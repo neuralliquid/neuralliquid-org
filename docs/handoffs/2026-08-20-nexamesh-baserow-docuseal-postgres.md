@@ -53,63 +53,63 @@ This session fixed that, then started wiring public DNS for them.
    gotchas section — secrets are placeholders only, real values were never
    committed anywhere.
 6. **Opened PR #15** for this branch (`docs/nexamesh-migration-continuation`).
-7. **Started public DNS wiring for `ops.nexamesh.ai` / `sign.nexamesh.ai`**,
-   then got corrected mid-attempt by the user: these records must **not**
-   go into the source zone in `mys-global-shared-rg` (`mystira-sub`) —
-   stopped before writing anything there. Confirmed instead the destination
-   `nexamesh.ai` DNS zone belongs in `nexamesh-sub` (Celladore tenant),
-   effectively starting Phase 1 of the migration plan early, scoped just to
-   what Baserow/DocuSeal need. While scoping that, found `nexamesh-sub` also
-   has `Microsoft.Network` unregistered (same class of gap as the Postgres
-   RP above — confusingly surfaces as `(BadRequest) The specified
+7. **Wired public DNS for `ops.nexamesh.ai` / `sign.nexamesh.ai`**, after
+   first getting corrected mid-attempt by the user: these records must
+   **not** go into the source zone in `mys-global-shared-rg`
+   (`mystira-sub`) — stopped before writing anything there. Confirmed
+   instead the destination `nexamesh.ai` DNS zone belongs in `nexamesh-sub`
+   (Celladore tenant), effectively starting Phase 1 of the migration plan
+   early, scoped just to what Baserow/DocuSeal need. Found `nexamesh-sub`
+   also had `Microsoft.Network` unregistered (same class of gap as the
+   Postgres RP above — confusingly surfaces as `(BadRequest) The specified
    subscription ... does not exist` on any `az network` command, not an
-   RP-registration-sounding error). Registration was kicked off
-   (`az provider register --namespace Microsoft.Network`) and was still
-   `Registering` when this session ended — **not confirmed complete, and
-   the DNS zone itself was never created.**
+   RP-registration-sounding error); registered it, then:
+   - Created RG `nex-prod-shared-rg` (`northeurope`) and DNS zone
+     `nexamesh.ai` inside it, in `nexamesh-sub`. **Note: this zone has its
+     own fresh set of 4 Azure nameservers, different from the source zone's
+     — record that as the Phase 3 NS-flip target when the time comes, don't
+     assume they match.**
+   - Added CNAME `ops` → Baserow's FQDN, TXT `asuid.ops` → the container
+     apps' shared domain-verification ID, CNAME `sign` → DocuSeal's FQDN,
+     TXT `asuid.sign` → same verification ID. None of this was
+     classifier-blocked.
+   - Attempted `az containerapp hostname add --hostname ops.nexamesh.ai`
+     next — **failed** with `InvalidCustomHostNameValidation`: Azure
+     validates custom domains via live public DNS, and the registrar still
+     delegates `nexamesh.ai` to the OLD zone (Phase 3 not done), so the new
+     zone's records are invisible to the internet. Not a bug — the expected
+     chicken-and-egg consequence of standing up a new zone before cutover.
+   - Asked the user how to unblock it (wait for Phase 3 vs. temporarily
+     mirror these 2 records into the old zone too). **Decision: wait for
+     full Phase 3 registrar cutover** — no temporary write to
+     `mys-global-shared-rg`. So custom-domain binding + TLS on both
+     container apps stays blocked, by decision, until Phase 3.
 
 ---
 
 ## 2. What is explicitly NOT done yet
 
-- **`Microsoft.Network` provider registration on `nexamesh-sub`** — kicked
-  off, state unconfirmed at session end. Check with:
+- **Custom-domain binding + TLS for `ops.nexamesh.ai` / `sign.nexamesh.ai`
+  on the container apps** — blocked by decision (see above) until Phase 3.
+  Once the registrar NS is flipped to the new zone's nameservers (see
+  §1 note — they differ from the source zone's), run:
   ```
-  az provider show --namespace Microsoft.Network --subscription 8a5dc70a-bafa-4a04-a281-9b4862a70810 --query registrationState -o tsv
+  az containerapp hostname add --hostname ops.nexamesh.ai -g nex-prod-services-rg -n nex-prod-baserow-ca --subscription 8a5dc70a-bafa-4a04-a281-9b4862a70810
+  az containerapp hostname bind --hostname ops.nexamesh.ai -g nex-prod-services-rg -n nex-prod-baserow-ca --environment nex-prod-services-cae --subscription 8a5dc70a-bafa-4a04-a281-9b4862a70810
   ```
-- **Destination `nexamesh.ai` DNS zone does not exist yet** in
-  `nexamesh-sub`. Once the provider is `Registered`:
-  1. Create RG `nex-prod-shared-rg` in `nexamesh-sub` (`northeurope` —
-     `westeurope` was rejected for this subscription earlier this session)
-     if it doesn't already exist — only `nex-prod-services-rg` exists there
-     currently.
-  2. Create DNS zone `nexamesh.ai` in that RG.
-  3. Add exactly these 4 records (nothing else yet — apex/www/docs mirroring
-     needs the destination SWAs to exist first, which is separate, later
-     Phase 1 work not started):
-     - CNAME `ops` → `nex-prod-baserow-ca.wittywater-11e95f33.northeurope.azurecontainerapps.io`
-     - TXT `asuid.ops` → `29C29A5B695C3245E7830EE24A6FA1D0F127C9E7C850D767916A4C3DCC34F7A7`
-     - CNAME `sign` → `nex-prod-docuseal-ca.wittywater-11e95f33.northeurope.azurecontainerapps.io`
-     - TXT `asuid.sign` → `29C29A5B695C3245E7830EE24A6FA1D0F127C9E7C850D767916A4C3DCC34F7A7`
-     (both apps share one verification ID — same Container Apps
-     environment, `nex-prod-services-cae`.)
-  4. Then bind the custom domains on each container app (`az containerapp
-     hostname add` + `hostname bind`, likely classifier-blocked like other
-     `containerapp` mutations this session — hand to the user if so) to
-     actually get TLS certs issued. **Don't assume DNS records alone are
-     enough** — the `docs.nexamesh.ai` SWA binding failure from an earlier
-     session is a cautionary example of a binding getting stuck `Failed`;
-     watch this one closely rather than assuming success.
-  5. **This new zone is not authoritative yet.** The registrar still points
-     at the `mys-global-shared-rg` zone in `mystira-sub`. `ops.nexamesh.ai`
-     / `sign.nexamesh.ai` will **not resolve publicly** until Phase 3
-     (registrar NS cutover) happens — don't report these as "live" until
-     that's done.
+  (and the equivalent pair for `sign.nexamesh.ai` / `nex-prod-docuseal-ca`).
+  These `containerapp` mutations weren't tested against the classifier this
+  session (the DNS-validation error hit first) — may need to be handed to
+  the user directly, same pattern as `containerapp create` earlier. **Don't
+  assume success** — the `docs.nexamesh.ai` SWA binding failure from an
+  earlier session is a cautionary example of a binding getting stuck
+  `Failed`; verify status explicitly after binding.
 - **Full Phase 1 zone mirror** (apex alias, `www`, `docs`, TXT records) —
   not started; blocked on the destination SWAs (`nex-prod-marketing-swa`,
   `nex-prod-docs-swa`) not existing yet in `nexamesh-sub`.
 - **Phase 3 registrar cutover** — user-only action (registrar login),
-  unchanged from every prior handoff.
+  unchanged from every prior handoff. This is now the actual blocker for
+  `ops`/`sign` going live, not just a later cleanup step.
 - **`nl-prod-hov-app`'s `DOCUSEAL_URL`/`DOCUSEAL_API_URL` update** to
   `sign.nexamesh.ai` — a live production app's config change; deliberately
   deferred until `sign.nexamesh.ai` is confirmed actually resolving and
@@ -118,23 +118,23 @@ This session fixed that, then started wiring public DNS for them.
 - **`docs.nexamesh.ai`'s existing SWA binding failure** (source side,
   `mystira-sub`) — still diagnosed-not-fixed from earlier sessions, untouched
   this session.
-- Baton `6a82ebe0` still needs a further update once the DNS zone + hostname
-  binding work above actually completes.
 
 ---
 
 ## 3. Starting checklist for next session
 
-1. Confirm `Microsoft.Network` registration completed on `nexamesh-sub`;
-   register it again if somehow still not — should be a one-time,
-   non-blocked call like the Postgres RP fix earlier this session.
-2. Create `nex-prod-shared-rg` + `nexamesh.ai` DNS zone in `nexamesh-sub`,
-   add the 4 records listed above.
-3. Bind custom domains on `nex-prod-baserow-ca` / `nex-prod-docuseal-ca` to
-   `ops.nexamesh.ai` / `sign.nexamesh.ai` and confirm managed certs actually
-   issue (don't assume — verify status explicitly).
-4. Update Baton `6a82ebe0` once that's confirmed working.
-5. Only after 1–3 are solid: revisit whether to proceed with the rest of
+1. Confirm with the domain owner whether Phase 3 (registrar NS cutover) is
+   ready to execute — this is now the direct blocker for `ops`/`sign` going
+   live, not a distant later step. If yes, that's a bigger, separate
+   decision (flips the *entire* domain's delegation, not just these two
+   subdomains) — re-read the Phase 3 section of the plan doc before touching
+   the registrar.
+2. Once NS is flipped (or if the owner instead wants the earlier-declined
+   temporary-mirror-into-the-old-zone approach reconsidered): bind custom
+   domains on `nex-prod-baserow-ca` / `nex-prod-docuseal-ca`, confirm
+   managed certs actually issue.
+3. Update Baton `6a82ebe0` once that's confirmed working.
+4. Only after that's solid: revisit whether to proceed with the rest of
    Phase 1 (SWA recreation + full zone mirror) or pause there pending the
    credential-boundary decision (Option A vs. B, still not formally
    confirmed by the domain owner despite being the working assumption).
