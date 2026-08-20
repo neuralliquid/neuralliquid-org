@@ -277,9 +277,15 @@ record set alone:
   domains on this one resource, both status `Ready`). There is no separate
   third Static Web App for `www` — correcting the earlier read of the zone
   dump, which had assumed the `www` CNAME target implied a distinct app.
-- **`nex-prod-docs-swa`** (Standard tier, `westeurope`, provider `SwaCli` —
-  not GitHub-connected; how it's actually deployed is unconfirmed). This is
-  the root cause of the `docs.nexamesh.ai` HTTPS failure flagged above:
+- **`nex-prod-docs-swa`** (Standard tier, `westeurope`, provider `SwaCli`).
+  **Deploy source resolved 2026-08-20 (continuation):**
+  `Nexamesh/nexamesh-core/.github/workflows/deploy-docs-azure.yml`, triggers
+  on push to `main` (+ manual dispatch), builds `apps/docs` (a **Docusaurus**
+  static site) and deploys it via `@azure/static-web-apps-cli` + a
+  deployment-token secret — not Azure's native GitHub-integration OIDC flow,
+  which is why the resource's `provider` field reads `SwaCli` rather than
+  `GitHub` even though a GitHub Actions workflow is the real deploy path.
+  This is the root cause of the `docs.nexamesh.ai` HTTPS failure flagged above:
   `az staticwebapp hostname list` shows its one custom domain,
   `docs.nexamesh.ai`, in status **`Failed`** since `2026-08-12T12:08:44Z`
   (`errorMessage: "An unknown error has occurred while adding your custom
@@ -301,6 +307,34 @@ public NXDOMAIN. Either it was never provisioned or HOV's integration config
 points at a dead hostname. Independent of the migration; tracked on the new
 Baton subtask (`6a82ebe0`) rather than fixed here, since it's unclear what
 it should point to without checking HOV's own config first.
+
+**`ops.nexamesh.ai` — checked 2026-08-20 (continuation):** confirmed genuine,
+not a stale config — `nl-prod-hov-app`'s live app settings resolve
+`BASEROW_API_URL`, `BASEROW_URL`, and `NEXT_PUBLIC_BASEROW_URL` all to
+`https://ops.nexamesh.ai(/api)`. Searched this entire inventory doc for any
+Baserow container/VM/App Service already provisioned in `mystira-sub` —
+**none exists**. So this isn't "DNS record missing for infra that's already
+running" — either Baserow lives outside Azure entirely (self-hosted
+elsewhere, or Baserow's own SaaS) and only the DNS record was never created,
+or the Baserow backend itself was never stood up. Not determinable from
+infra alone; needs the domain owner to say which.
+
+**Second, more serious architecture gap found via the same app-settings
+read:** `nl-prod-hov-app` also resolves `DOCUSEAL_API_URL` to
+`https://docs.nexamesh.ai/api` and `DOCUSEAL_URL`/`NEXT_PUBLIC_DOCUSEAL_URL`
+to `https://docs.nexamesh.ai` — i.e. HOV expects a **DocuSeal** (document
+e-signature) service at that hostname. But `nex-prod-docs-swa` — the only
+thing actually deployed to `docs.nexamesh.ai` — is confirmed (above) to be a
+static **Docusaurus** documentation site with no API surface at all. These
+are two unrelated products that happen to share a domain-shaped name.
+Searched this doc for any other DocuSeal infrastructure in `mystira-sub`:
+**none exists.** So even setting aside the Failed TLS binding, HOV's
+DocuSeal integration would 404 against a docs site if the binding worked —
+this is a second, independent bug layered under the first, not something
+the binding remediation alone fixes. Flagged on Baton subtask `6a82ebe0` as
+blocking Phase 1 of the migration plan, since rebuilding
+`nex-prod-docs-swa` as-is in the destination would faithfully reproduce a
+resource that doesn't do what HOV needs from it.
 
 Full detail, the corrected framing, and the migration plan are in
 `docs/plans/nexamesh-ai-azure-migration-plan.md`.

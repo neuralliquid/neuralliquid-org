@@ -79,8 +79,12 @@ tenant `9530cd32`, identity `jurie@phoenixvc.tech`):**
     `Nexamesh/nexamesh-core`, branch `main`). Custom domains `nexamesh.ai`
     and `www.nexamesh.ai`, both status **Ready**. `defaultHostname`:
     `jolly-beach-01f60a803.7.azurestaticapps.net`.
-  - `nex-prod-docs-swa` (Standard tier, `westeurope`, provider `SwaCli` —
-    not GitHub-connected, deployed some other way, unconfirmed how).
+  - `nex-prod-docs-swa` (Standard tier, `westeurope`, provider `SwaCli`).
+    **Deploy source resolved 2026-08-20:**
+    `Nexamesh/nexamesh-core/.github/workflows/deploy-docs-azure.yml` — GitHub
+    Actions, push-to-`main` + manual dispatch, builds `apps/docs`
+    (Docusaurus) and deploys via SWA CLI + deployment token (not Azure's
+    native GitHub-integration flow, which is why `provider` reads `SwaCli`).
     Custom domain `docs.nexamesh.ai` status **Failed** since 2026-08-12
     ("An unknown error has occurred while adding your custom domain") — no
     TLS cert was ever issued. `defaultHostname`:
@@ -141,8 +145,66 @@ both. Either:
   `plan` workflow instead of hand execution. Worth it only if this becomes
   a repeated pattern (it might, if more Nexamesh infra moves later).
 
-No decision made yet on A vs. B — flagged as an open question on the Baton
-subtask, not resolved by this document.
+**Recommendation (2026-08-20, continuation session): Option A.** This is a
+one-time cutover, not a repeated pattern yet — the `neuralliquid.ai`
+precedent used hand-execution successfully under the identical constraint,
+and B2B guest setup is pure overhead unless/until more Nexamesh infra
+follows. Revisit toward B only if a second migration of this shape shows up.
+Not yet confirmed by the domain owner — treat as the working assumption for
+Phase 1 planning, not a closed decision.
+
+---
+
+## Standing up Baserow (`ops.nexamesh.ai`) and DocuSeal (`docs.nexamesh.ai`)
+
+Neither exists as real infrastructure today — confirmed above, nothing in
+`mystira-sub` runs either. Both are self-hostable open-source products with
+official Docker images, and both also have a SaaS option. Recommendation
+below is advisory, cost-driven — not executed, needs the domain owner's
+sign-off before provisioning either.
+
+**Recommendation: self-host both, in `nexamesh-sub`, not SaaS.** Reasoning:
+
+- **Cost.** `387d5c34` (the org-restructuring task) already documents a
+  tight, explicit ceiling: Eben's real budget is $300/mo Azure + $150/mo
+  GitHub, and current Mystira-side spend already exceeds it. Adding two new
+  *per-seat* SaaS subscriptions on top of that is the wrong direction; a
+  self-hosted pair of small Azure Container Apps is roughly a flat,
+  low-tens-of-dollars monthly cost regardless of headcount, in the *new*
+  `nexamesh-sub` subscription (not stacked onto Mystira's already-strained
+  one). SaaS list pricing for both products changes over time — verify
+  current numbers at baserow.io/pricing and docuseal.com/pricing before
+  comparing, don't trust a remembered figure here.
+- **Fit.** Both ship an official all-in-one Docker image
+  (`baserow/baserow:1-all-in-one` bundles backend + worker + frontend +
+  embedded Postgres + Caddy for TLS; `docuseal/docuseal` is a single
+  container, SQLite by default, can point at Postgres). Light internal-tool
+  load (one estate/ops team, not a multi-tenant SaaS) fits comfortably in a
+  small Azure Container App — e.g. 0.5 vCPU / 1 GiB, min replicas 1 for
+  always-on (HOV depends on both live, so scale-to-zero isn't appropriate
+  here even though it's cheaper). Rough combined estimate: ~$30-70/mo for
+  both, well inside a dedicated subscription's headroom — verify against
+  current Azure Container Apps consumption pricing before committing to a
+  number.
+- **Ops trade-off, stated plainly:** self-hosting trades SaaS's zero-ops
+  convenience (backups, patching, TLS renewal, uptime SLA all handled) for
+  lower/flatter cost and data locality. The all-in-one images' embedded
+  databases are a single point of failure unless backed by a real backup
+  routine (volume snapshot, or point at Azure Database for PostgreSQL
+  Flexible Server instead of the embedded DB if that matters for either
+  service's data). Worth an explicit decision, not a default.
+- **Placement:** both belong in the *destination* (`nexamesh-sub`), as part
+  of this migration's Phase 1 — not built in `mystira-sub` first and moved
+  later. This also directly resolves the DocuSeal/Docusaurus hostname
+  conflict above: once a real DocuSeal container exists, `docs.nexamesh.ai`
+  needs either a path split (`/` → Docusaurus docs, `/api` → proxied to
+  DocuSeal, via the SWA's `staticwebapp.config.json` routing) or two
+  separate hostnames (e.g. move docs to `docs.nexamesh.ai` and DocuSeal to
+  something like `sign.nexamesh.ai`, updating HOV's `DOCUSEAL_URL` to
+  match) — the second is simpler and avoids fighting SWA route config for a
+  mixed static+API origin. Flagging both options rather than picking one;
+  this is the kind of call that should be made once, deliberately, not
+  discovered by whichever engineer next has to debug a 404.
 
 ---
 
@@ -157,13 +219,27 @@ subtask, not resolved by this document.
   move of the existing one).
 - 2 Static Web Apps recreated: `nex-prod-marketing-swa` (re-link the
   `Nexamesh/nexamesh-core` GitHub repo, branch `main`) and
-  `nex-prod-docs-swa` (deploy source unconfirmed — resolve how the current
-  one is actually deployed before recreating it blind, since `SwaCli`
-  provider on the source implies some out-of-band deploy tooling, not a
-  GitHub Actions workflow).
+  `nex-prod-docs-swa` (deploy source **resolved 2026-08-20**:
+  `Nexamesh/nexamesh-core/.github/workflows/deploy-docs-azure.yml` — push to
+  `main` builds `apps/docs` and deploys via SWA CLI + a deployment-token
+  secret; point that workflow's `AZURE_STATIC_WEB_APPS_API_TOKEN` at the new
+  destination resource once it exists, same as re-linking the marketing
+  app's GitHub connection).
 - **Fix the `docs.nexamesh.ai` binding failure on the *destination* SWA
   from the start** — no reason to carry the Failed-binding bug forward into
   a fresh resource; this is a chance to not reproduce it.
+- **New blocker found 2026-08-20 (continuation): resolve the
+  DocuSeal/Docusaurus conflict before recreating `nex-prod-docs-swa`.**
+  `nl-prod-hov-app`'s live app settings expect a **DocuSeal** e-signature
+  API at `docs.nexamesh.ai/api`, but the only thing ever deployed to that
+  hostname is the Docusaurus docs site above — no API surface exists there,
+  and no other DocuSeal infrastructure is documented anywhere in
+  `mystira-sub`. Rebuilding `nex-prod-docs-swa` as-is would faithfully
+  reproduce a resource that doesn't do what HOV needs from it. Needs the
+  domain owner to say which is true: (a) DocuSeal was never actually stood
+  up and HOV's config is aspirational/stale, (b) DocuSeal runs elsewhere
+  (self-hosted or SaaS) and only the routing was never wired up, or (c)
+  something else. Don't silently pick one when scaffolding Phase 1.
 
 ### Phase 2 — Verify destination in isolation
 - Every DNS record re-verified by querying the new zone's own
@@ -194,16 +270,28 @@ subtask, not resolved by this document.
 
 ## Open items / blocking
 
-- **A vs. B credential approach** (see above) — needs a decision before
-  Phase 1 starts.
-- **`nex-prod-docs-swa`'s actual deploy source** — unconfirmed; needed
-  before Phase 1 can recreate it correctly.
-- **`ops.nexamesh.ai`** — separate investigation, not gating this
-  migration, but should be resolved (or explicitly deferred) before Phase 3
-  so the cutover doesn't quietly drop a hostname a live NeuralLiquid
-  workload depends on.
+- **A vs. B credential approach** — recommended A above; not yet confirmed
+  by the domain owner.
+- ~~`nex-prod-docs-swa`'s actual deploy source~~ — **resolved 2026-08-20**,
+  see Phase 1 above.
+- **DocuSeal/Docusaurus conflict at `docs.nexamesh.ai`** — new, gates Phase
+  1 for `nex-prod-docs-swa` specifically (marketing SWA is unaffected).
+- **`ops.nexamesh.ai`** — narrowed 2026-08-20: confirmed a genuine live
+  dependency (`nl-prod-hov-app`'s Baserow env vars), and confirmed no
+  Baserow infra exists anywhere in `mystira-sub` today. Still needs the
+  domain owner to say whether Baserow is hosted outside Azure (just needs a
+  DNS record) or needs to be provisioned as new infra — should be resolved
+  (or explicitly deferred) before Phase 3 so the cutover doesn't quietly
+  drop a hostname a live NeuralLiquid workload depends on.
 - **Registrar login** — user-only action, same as the `neuralliquid.ai`
   precedent.
+- **New, larger question raised 2026-08-20 (user, mid-session):** should
+  `nl-prod-hov-app` (HOV) itself move from `neuralliquid-sub`/NeuralLiquid
+  into `nexamesh-sub`/`nexamesh-org`, given its only two non-Mystira runtime
+  dependencies are both Nexamesh's own services (Baserow, DocuSeal)? This is
+  a separate, larger-scope question than this document's DNS/compute
+  cutover — tracked as an open decision on Baton task `387d5c34` rather than
+  folded into this plan. See that task before assuming HOV stays put.
 
 ---
 
