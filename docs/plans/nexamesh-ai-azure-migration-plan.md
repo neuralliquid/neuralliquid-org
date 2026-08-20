@@ -193,9 +193,9 @@ sign-off before provisioning either.
   routine (volume snapshot, or point at Azure Database for PostgreSQL
   Flexible Server instead of the embedded DB if that matters for either
   service's data). Worth an explicit decision, not a default.
-**Provisioning status (2026-08-20, continuation session): partially built,
-live in `nexamesh-sub`.** Executed directly (greenfield, empty subscription,
-no live traffic depends on any of it):
+**Provisioning status (2026-08-20, continuation session): fully built and
+healthy, live in `nexamesh-sub`.** Executed directly (greenfield, empty
+subscription, no live traffic depends on any of it):
 
 - RG `nex-prod-services-rg` — **note the region deviates from the `nex-`
   convention's usual `westeurope`**: this subscription is brand-new and
@@ -206,19 +206,89 @@ no live traffic depends on any of it):
   eligibility later (new-subscription restrictions sometimes lift once
   there's billing history) before assuming `northeurope` is permanent.
 - Storage account `nexprodsvcstorage` (Standard_LRS) with two Azure Files
-  shares: `baserow-data`, `docuseal-data` (20 GiB quota each).
+  shares: `baserow-data`, `docuseal-data` (20 GiB quota each). **Files-only
+  now** — see "External Postgres, not the embedded DBs" below for why the
+  databases don't live here.
 - Log Analytics workspace `nex-prod-services-law`.
 - Container Apps environment `nex-prod-services-cae`, with both file shares
   registered as environment-level storage mounts.
+- Azure Database for PostgreSQL Flexible Server `nex-prod-services-db`
+  (Burstable `Standard_B1ms`, 32 GiB, PostgreSQL 16, `northeurope`), with two
+  databases, `baserow` and `docuseal`, and a firewall rule
+  (`AllowAzureServices`, the `0.0.0.0`–`0.0.0.0` sentinel range) permitting
+  the Container Apps environment's outbound traffic to reach it.
+- `nex-prod-baserow-ca` and `nex-prod-docuseal-ca` — both container apps
+  created and confirmed **`Healthy` / `RunningAtMaxScale`** via
+  `az containerapp revision list`; DocuSeal additionally confirmed serving
+  real HTTP (`302` from its own hostname, not just Azure-side health).
 
-**Blocked, not executed:** the final `az containerapp create` step for both
-apps — Claude Code's auto-mode classifier denied the command outright (a
-separate guardrail from the domain owner's go-ahead on the approach; not
-worked around). Manifests below are ready to run as-is by whoever has
-permission — the user directly, or a session with this action allowlisted:
+**Classifier note (kept for future reference):** Claude Code's auto-mode
+classifier denies `az containerapp create` / `az postgres flexible-server
+create` and similar resource-mutating calls outright when run from an agent
+session, separately from the domain owner's go-ahead on the approach. Not
+worked around — every command below was executed by the domain owner
+directly, in their own terminal, from commands handed over verbatim.
+
+### External Postgres, not the embedded DBs
+
+Both all-in-one images defaulted to an **embedded** database backed by the
+Azure Files (SMB) volume mount above, and both crash-looped on first boot:
+
+- **Baserow**: embedded Postgres's `POSTGRES_INIT` seeding step ran
+  `cp --preserve=timestamps ...` against the SMB-mounted `/baserow/data`,
+  which failed with `Operation not permitted` — the Linux CIFS client
+  backing Azure Files' default SMB protocol doesn't support POSIX
+  `utimes()` timestamp preservation.
+- **DocuSeal**: defaults to SQLite, which upstream SQLite documentation
+  explicitly calls out as unsafe over any network filesystem — POSIX
+  byte-range locking isn't reliably honored by network shares.
+
+This is a structural mismatch between the images' embedded/default
+databases and Azure Files' SMB protocol, not an app bug, and it's why both
+images ship env-var overrides to point at an external Postgres instead.
+Fixed by wiring both apps to the shared Flexible Server above:
+
+- **Baserow** — `DATABASE_HOST` / `DATABASE_PORT` / `DATABASE_NAME` /
+  `DATABASE_USER` / `DATABASE_PASSWORD` env vars (the last as a Container
+  Apps secret reference); setting these bypasses the embedded Postgres
+  automatically.
+- **DocuSeal** — a single `DATABASE_URL` env var (also a secret reference),
+  `postgres://<user>:<password>@nex-prod-services-db.postgres.database.azure.com:5432/docuseal?sslmode=require`.
+
+Azure Files stays in use only for non-database object storage (Baserow media
+uploads, DocuSeal's non-DB `/data` files), which doesn't need POSIX locking.
+Estimated added cost: ~$15-20/mo, inside the $300/mo ceiling documented on
+Baton `387d5c34`.
+
+**Gotchas hit while provisioning `nex-prod-services-db` (for next time):**
+
+- `nexamesh-sub` had never provisioned a Postgres Flexible Server before, so
+  the first create attempt failed with `MissingSubscriptionRegistration` —
+  the `Microsoft.DBforPostgreSQL` resource-provider namespace wasn't
+  registered on the subscription yet. Fixed with a one-time
+  `az provider register --namespace Microsoft.DBforPostgreSQL`; this call
+  wasn't classifier-blocked (it's not a billable resource, just an RP
+  namespace unlock) and took a few minutes to flip to `Registered`.
+- A first create attempt (server originally named `nex-prod-services-pg`)
+  landed in the **wrong subscription** (`celladore-sub`, the identity's
+  default) because the terminal's active `az` subscription context had
+  silently reverted mid-session. Caught before any other resource was
+  touched (confirmed via `az resource list` that the wrong-subscription RG
+  held only that one server), cleaned up with `az group delete`, and every
+  subsequent command in the sequence pinned `--subscription` explicitly
+  rather than relying on `az account set` persisting.
+- Postgres Flexible Server names are globally unique (they map to
+  `<name>.postgres.database.azure.com`), and deleting a server does **not**
+  immediately free its name for reuse — the global DNS reservation can
+  outlive the resource by tens of minutes. Rather than wait it out, the
+  server was renamed to `nex-prod-services-db` (final name) to dodge the
+  collision.
+- `baserow/baserow:1-all-in-one` no longer exists on Docker Hub — Baserow
+  retired that tag naming with its 2.x line. Pinned to
+  `baserow/baserow:2.3.3` (current stable all-in-one) instead.
 
 <details>
-<summary><code>nex-prod-baserow-ca</code> — <code>az containerapp create --yaml baserow-ca.yaml</code></summary>
+<summary><code>nex-prod-baserow-ca</code> — final manifest as created</summary>
 
 ```yaml
 location: northeurope
@@ -236,7 +306,7 @@ properties:
     activeRevisionsMode: Single
   template:
     containers:
-      - image: baserow/baserow:1-all-in-one
+      - image: baserow/baserow:2.3.3
         name: baserow
         resources:
           cpu: 0.5
@@ -256,10 +326,15 @@ properties:
       maxReplicas: 1
 ```
 
+Postgres wiring applied after create via `az containerapp secret set` +
+`az containerapp update --set-env-vars` (`DATABASE_HOST`, `DATABASE_PORT`,
+`DATABASE_NAME`, `DATABASE_USER`, `DATABASE_PASSWORD=secretref:...`) —
+credentials are a Container Apps secret, never written to this doc.
+
 </details>
 
 <details>
-<summary><code>nex-prod-docuseal-ca</code> — <code>az containerapp create --yaml docuseal-ca.yaml</code></summary>
+<summary><code>nex-prod-docuseal-ca</code> — final manifest as created</summary>
 
 ```yaml
 location: northeurope
@@ -302,10 +377,17 @@ properties:
       maxReplicas: 1
 ```
 
+Postgres wiring applied after create via `az containerapp secret set` +
+`az containerapp update --set-env-vars DATABASE_URL=secretref:...` — the
+full connection string (including `sslmode=require`) is a Container Apps
+secret, never written to this doc.
+
 </details>
 
-After creation: verify both against their default `*.azurecontainerapps.io`
-hostnames first. Custom-domain binding for `ops.nexamesh.ai` /
+Verified both against their default `*.azurecontainerapps.io` hostnames:
+Azure-side revision health `Healthy`/`RunningAtMaxScale` for both, and
+DocuSeal additionally confirmed serving a real HTTP `302` from its own
+hostname. Custom-domain binding for `ops.nexamesh.ai` /
 `sign.nexamesh.ai` needs a DNS record — **that record has to go in the
 currently-authoritative zone in `mys-global-shared-rg`** (a live-prod DNS
 write, not yet confirmed) until the full zone migration below reaches Phase
@@ -400,9 +482,13 @@ decision to split the two services onto separate hostnames.
   2026-08-20 (user decision):** keep Docusaurus at `docs.nexamesh.ai`
   unchanged; DocuSeal gets its own new hostname, `sign.nexamesh.ai`.
 - ~~`ops.nexamesh.ai` / Baserow hosting~~ — **resolved 2026-08-20 (user
-  decision):** self-host on Azure Container Apps in `nexamesh-sub`.
-  Partially provisioned — see "Standing up Baserow and DocuSeal" above for
-  exact state and what's still blocked.
+  decision):** self-host on Azure Container Apps in `nexamesh-sub`. **Fully
+  provisioned and healthy** — both `nex-prod-baserow-ca` and
+  `nex-prod-docuseal-ca` confirmed `Healthy`/`RunningAtMaxScale` on an
+  external Postgres Flexible Server; see "Standing up Baserow and DocuSeal"
+  above for exact state. Still outstanding: DNS records for
+  `ops.nexamesh.ai`/`sign.nexamesh.ai` and `nl-prod-hov-app`'s
+  `DOCUSEAL_URL` update.
 - **Registrar login** — user-only action, same as the `neuralliquid.ai`
   precedent.
 - **New, larger question raised 2026-08-20 (user, mid-session):** should
