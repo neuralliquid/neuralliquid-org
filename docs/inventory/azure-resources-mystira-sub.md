@@ -124,14 +124,37 @@ tables.
 | Application Insights | App Insights | **undocumented** |
 | NIC (private endpoint) | Network Interface | **undocumented** |
 
-**Open question, not resolved this pass:** `nl-prod-shared-pg` carries a
+**Resolved 2026-08-20 (continued pass):** `nl-prod-shared-pg` carries a
 `houseofveritas` PostgreSQL database (Tier A, confirmed live) *and*
 `nl-prod-hov-rg` independently carries a Cosmos DB Mongo API account
 (`nlprodhovcosmos`, confirmed live) with a full private-networking stack
-around it. Both datastores exist simultaneously. Which one HOV's app
-actually reads/writes was **not determined** this pass — would require
-checking `nl-prod-hov-app`'s connection-string app settings, which was not
-done. Flagging rather than guessing.
+around it. `az webapp config appsettings list --name nl-prod-hov-app
+--resource-group nl-prod-hov-rg --subscription bb4e3882-…` shows **both are
+wired into the app live**: `DATABASE_URL`/`POSTGRES_URL` point at the
+`houseofveritas` Postgres database, and `MONGODB_URI` points at
+`nlprodhovcosmos` with a populated (non-empty) connection string.
+`ESTATE_BACKEND=postgres` marks Postgres as the selected backend for estate
+data, but the Mongo connection string is live and populated, not a dead
+leftover — which of the app's code paths actually calls Cosmos isn't
+determinable from app settings alone. **Do not delete or reprovision either
+datastore without checking the app's source**, since env-var presence proves
+wiring, not usage.
+(Values not reproduced here — several of these app settings are live
+credentials.)
+
+**Also surfaced by this same app-settings read:** `nl-prod-hov-app` has live
+runtime dependencies on `https://ops.nexamesh.ai` (`BASEROW_API_URL` /
+`NEXT_PUBLIC_BASEROW_URL`) and `https://docs.nexamesh.ai`
+(`DOCUSEAL_API_URL` / `DOCUSEAL_URL` / `NEXT_PUBLIC_DOCUSEAL_URL`), plus
+`https://identity.mystira.app` (`MYSTIRA_OIDC_ISSUER`). This is a genuine
+cross-product coupling: a NeuralLiquid product (HOV) calls into Nexamesh's
+Baserow ops backend and DocuSeal signing service, and authenticates against
+Mystira's identity issuer, at runtime — not just at the DNS layer. Any future
+DNS/subscription cutover for `nexamesh.ai` needs to either preserve these
+hostnames or coordinate the cutover with HOV; this is why `mystira.app`
+staying in place (per 2026-08-20 user direction, see below) doesn't fully
+decouple HOV from mystira-sub's blast radius on its own — the Nexamesh
+coupling is a separate, unaddressed dependency.
 
 ### `nl-prod-cognitive-mesh-rg`
 
@@ -140,7 +163,7 @@ done. Flagging rather than guessing.
 | `cognitive-mesh-api-prod` | App Service (**not** a Container App) | kind `app,linux,container`, S1 plan — old doc's Tier C called this "Container App `cognitive-mesh-api`"; live data shows it's a containerized **App Service** with a different name |
 | `cognitive-mesh-frontend-prod` | App Service | present, matches old doc's name |
 | staging slot × 2 | `Microsoft.Web/sites/slots` | one per app above — **undocumented** |
-| `cognitive-mesh-kv-prod` | Key Vault | **undocumented** in old doc; RBAC mode was captured live during the audit but the specific value was not retained through this write-up — re-run `az keyvault show --name cognitive-mesh-kv-prod --resource-group nl-prod-cognitive-mesh-rg --subscription bb4e3882-2079-4bab-8974-611bc0b8bb58 --query enableRbacAuthorization` to confirm rather than trusting this row |
+| `cognitive-mesh-kv-prod` | Key Vault | **Resolved 2026-08-20:** `enableRbacAuthorization: false` — **not** RBAC-enabled (legacy access-policy mode), confirmed via `az keyvault show --query properties.enableRbacAuthorization`. Same pattern as `nl-prod-hov-kv`, not `nl-prod-convolens-kv` |
 | 3× managed certificate | App Service certificates | **undocumented** |
 
 `cog-dev-rg-san` (old doc's Tier C guess for a Container Apps Environment)
@@ -200,6 +223,83 @@ target and drift-risk asset, not a deletable husk. It also cannot be deleted
 in isolation: `mys-global-shared-rg` is a **multi-product** RG, and removing
 it would also take out the `phoenixvc.tech` and `nexamesh.ai` zones and the
 shared storage/ACR/Communication Services resources that live alongside it.
+
+### `nexamesh.ai` zone — checked 2026-08-20, unlike `neuralliquid.ai` this one is live
+
+Per user direction 2026-08-20, `nexamesh.ai` is next in line for equivalent
+treatment to what `neuralliquid.ai` already got (see "2026-08-20 scoping
+decision" below). A read-only check of this zone found it in a materially
+different state than `neuralliquid.ai`'s:
+
+- `az network dns record-set list --zone-name nexamesh.ai --resource-group
+  mys-global-shared-rg --subscription bb4e3882-…` — apex `A` record is an ARM
+  alias to `nex-prod-marketing-swa`, in resource group **`nex-prod-shared-rg`**
+  (same subscription, mystira-sub) — a resource group not among the 7
+  authorized for this audit and **not previously known to this repo's
+  inventory**. `www` CNAMEs to a second Static Web App
+  (`jolly-beach-01f60a803…`); `docs` CNAMEs to a third
+  (`ashy-bay-0136c8003…`).
+- **Unlike `neuralliquid.ai`'s shadow zone, this one is genuinely
+  authoritative.** A public `nslookup -type=NS nexamesh.ai` (default
+  resolver, Azure-independent) returns the same four `ns*-01.azure-dns.*`
+  nameservers as this zone's own `NS` record set — the registrar delegates
+  here. Migrating `nexamesh.ai` off mystira-sub is therefore a **live
+  registrar cutover**, the same category of work `neuralliquid.ai` went
+  through, not a stale-zone cleanup.
+- `www.nexamesh.ai` and the apex both serve `200 OK`. **`docs.nexamesh.ai`
+  resolves via public DNS** (to the same Static Web App / Traffic Manager
+  chain as the others) **but a plain HTTPS request to it returns no response
+  at all** (`curl` exit/HTTP code `000` — connection or TLS-handshake
+  failure, not an HTTP error status). This contradicts Track C's
+  (`5d5983e6`) stated blocker of "`docs.nexamesh.ai` DNS NXDOMAIN" as
+  currently worded — the DNS layer resolves fine today. The real fault looks
+  like a custom-domain/certificate binding problem on the
+  `nex-prod-shared-rg` Static Web App, which is out of this audit's scope to
+  diagnose further. Track C's blocker description should be corrected from
+  "DNS NXDOMAIN" to "DNS resolves, HTTPS connection fails" before anyone
+  spends time re-checking DNS records that are already fine.
+- No further enumeration of `nex-prod-shared-rg` was attempted — flagging as
+  a new scope gap (added to the "What still needs re-verification" list
+  below) rather than silently widening this pass's authorized scope.
+
+## 2026-08-20 scoping decision (user direction, recorded verbatim intent)
+
+The user provided the following scoping input for Track B this session,
+recorded here rather than resolved into an implementation choice this pass
+was not authorized to make:
+
+- **`mystira.app` and `phoenixvc.tech` stay exactly where they are** — out of
+  scope for the NeuralLiquid sovereignty migration, permanently on
+  mystira-sub / `mys-global-shared-rg`. This directly means `mys-global-shared-rg`
+  **can never be deleted or reassigned wholesale** — see the Subtask 7 note
+  below.
+- **`neuralliquid.ai` has already moved to Cloudflare** "as an intermediary
+  layer" — matches the completed Subtask 3 (`ab1e7ce6`) work documented in
+  `docs/inventory/dns.md`; no further action needed there.
+- **`nexamesh.ai` and any remaining `neuralliquid` DNS need to move to a "new
+  sub"** — the exact mechanism (a dedicated Azure subscription, a Cloudflare
+  account the same way `neuralliquid.ai` moved, or something else) was
+  **not specified and is not decided by this document**. Recording the
+  three live readings rather than picking one:
+  1. Give `nexamesh.ai` its own Cloudflare cutover, mirroring
+     `neuralliquid.ai`'s pattern exactly (decouples the domain from any
+     Azure subscription, sovereignty-agnostic).
+  2. Move `nexamesh.ai`'s DNS into a dedicated Azure subscription
+     (new or existing) under Nexamesh's own control.
+  3. Move `nexamesh.ai` into `neuralliquid-sub` specifically.
+
+  **Reading 3 conflicts with a standing ruling.** Baton task `387d5c34`
+  (this project) documents an explicit prior decision, from task
+  `6ed39c8a-86f8-4599-a7be-e506dd637e3b` (`mystira-workspace` project): *"Do
+  not place Nexamesh/nexamesh-core into any of the four NeuralLiquid product
+  slots... inclusion anywhere must not imply NeuralLiquid ownership."*
+  Nexamesh is its own 100%-user-IP org, distinct from NeuralLiquid (see
+  `docs/handoffs/2026-08-16-session-handoff.md` §2). Folding `nexamesh.ai`
+  into `neuralliquid-sub` would contradict that ruling unless it's
+  explicitly revisited first. Reading 1 (Cloudflare) is the safest default
+  by precedent and by this ruling, but this document does not decide it —
+  flagging for the next session or for direct user confirmation before any
+  `nexamesh.ai` DNS work is executed.
 
 ## Verdict on the 2026-08-19 tiered inventory
 
@@ -280,6 +380,12 @@ who/what manages that `_dnsauth` record if not this repo. The
 `mys-prod-core-cae`, in the out-of-scope `mys-prod-core-rg`) was **blocked
 outright by the Claude Code auto-mode classifier** as out-of-scope
 tooling — not attempted further, per the task's own scope boundary.
+**Re-attempted 2026-08-20 (continued pass): blocked again, same way,
+same command.** This is not an access problem (`jurie@phoenixvc.tech` has
+live Reader-or-better access to the subscription) — it's a tooling-scope
+restriction on this session. Resolving it needs either a scope expansion
+for `mys-prod-core-rg` or a session/identity not subject to that
+restriction, not another retry.
 **Correct framing: a second verification TXT record was observed on
 `login.hov`, its value captured, its ownership unattributable from this
 repo, and the mechanism it verifies unconfirmed** — not "the repo's value is
@@ -311,24 +417,33 @@ confirmed live and unchanged. Add to it:
    baseline, not an optional upgrade.
 4. **`mys-global-shared-rg` is a multi-product shared RG**, not a
    single-purpose orphaned DNS holder — deleting or reassigning it affects
-   `phoenixvc.tech` and `nexamesh.ai` as well as `neuralliquid.ai`.
+   `phoenixvc.tech` and `nexamesh.ai` as well as `neuralliquid.ai`. As of
+   2026-08-20, `phoenixvc.tech` and `mystira.app` are confirmed **permanently**
+   staying on mystira-sub (user direction, see scoping decision above) — this
+   RG's wholesale deletion is now off the table for good, not just deferred.
+   Subtask 7 (`56b11b40`, "Decommission & Cleanup on Mystira Subscription")
+   needs to be re-scoped from "delete orphaned RGs" to "remove
+   NeuralLiquid-specific records/resources from a shared RG that survives
+   indefinitely" — flagged directly on that task too, not just here.
 
 ## What still needs re-verification
 
-- `nl-dev-omnipost-kv` — out of scope this pass; needs its own RG added to
-  scope to resolve.
-- HOV's actual datastore (`houseofveritas` PG database vs. `nlprodhovcosmos`
-  Cosmos Mongo account, or both) — check `nl-prod-hov-app`'s connection
-  string / app settings.
-- `nl-prod-hov-app`'s runtime/`linuxFxVersion` — not checked this pass
-  (Convolens' was; HOV's wasn't).
-- `cognitive-mesh-kv-prod`'s RBAC mode — captured live during the audit but
-  not reliably retained for this write-up; re-run the `az keyvault show`
-  query above rather than trusting the placeholder note.
+- ~~`nl-dev-omnipost-kv`~~ — still out of scope this pass too; needs its own
+  RG (`nl-dev-omnipost-rg`) added to authorized scope to resolve. Not
+  enumerated on 2026-08-20 either.
+- ~~HOV's actual datastore~~ — **resolved 2026-08-20**, see the `nl-prod-hov-rg`
+  section above: both Postgres and Cosmos are live and wired in;
+  `ESTATE_BACKEND=postgres` selects Postgres, Cosmos usage is not ruled out.
+- `nl-prod-hov-app`'s runtime/`linuxFxVersion` — still not checked (Convolens'
+  was; HOV's wasn't; out of scope for the appsettings/connection-string pass
+  done 2026-08-20).
+- ~~`cognitive-mesh-kv-prod`'s RBAC mode~~ — **resolved 2026-08-20**:
+  `enableRbacAuthorization: false`, not RBAC-enabled.
 - Whether the Container App `login.hov` binding actually requires
-  `_dnsauth.login.hov` (vs. `asuid.login.hov`, vs. neither) — blocked by
-  tooling permissions on `mys-prod-core-rg` this pass; needs either a scope
-  expansion or someone with access to that RG.
+  `_dnsauth.login.hov` (vs. `asuid.login.hov`, vs. neither) — **re-attempted
+  and re-blocked 2026-08-20** (Claude Code auto-mode classifier, same as
+  2026-08-19); needs either a tooling-scope exception or a human/session with
+  access to `mys-prod-core-rg` not subject to that restriction.
 - 6 of the 7 in-scope RGs (all but `nl-prod-convolens-rg`) were checked
   against the saved dump plus targeted per-resource live calls, not
   independently re-listed via a fresh `az resource list` this pass — low
@@ -337,6 +452,21 @@ confirmed live and unchanged. Add to it:
 - The ~30 out-of-scope resource groups (`mys-dev-*`, `mys-prod-*` besides
   `core`, `pvc-*`, `nex-*`, `nl-dev-omnipost-rg`, etc.) — existence confirmed
   via the saved dump, contents not enumerated, by instruction.
+- **New 2026-08-20:** `nex-prod-shared-rg` (mystira-sub) — holds
+  `nex-prod-marketing-swa` (target of `nexamesh.ai`'s apex record) and likely
+  the two other Static Web Apps behind `www`/`docs`. Never in this audit's
+  authorized scope; not enumerated. Needed before any `nexamesh.ai` cutover
+  can be planned concretely (mirrors the role `nl-prod-web-rg` played for
+  `neuralliquid.ai`).
+- **New 2026-08-20:** `docs.nexamesh.ai` — DNS resolves correctly (contrary
+  to Track C's "NXDOMAIN" framing) but HTTPS connections fail outright
+  (`curl` code `000`). Root cause not diagnosed — likely a custom-domain/cert
+  binding issue on the `nex-prod-shared-rg` Static Web App; needs scope
+  expansion to that RG to confirm.
+- **New 2026-08-20:** the mechanism for moving `nexamesh.ai` off mystira-sub
+  ("new sub" per user direction) is unresolved — see the three readings
+  recorded in the scoping-decision section above, including a conflict with
+  a standing ruling against folding Nexamesh into NeuralLiquid ownership.
 
 ---
 
