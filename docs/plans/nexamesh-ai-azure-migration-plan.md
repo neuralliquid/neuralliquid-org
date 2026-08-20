@@ -518,35 +518,36 @@ decision to split the two services onto separate hostnames.
   CNAME`, both `bindingType: SniEnabled`, certs `Succeeded`).
   - **`sign.nexamesh.ai` (DocuSeal): fully healthy.** Confirmed end-to-end —
     resolves, TLS valid, direct HTTPS request returns a real `302`.
-  - **`ops.nexamesh.ai` (Baserow): DNS/TLS done, but the app is in an
-    active crash-restart loop — root cause found 2026-08-20, fix not yet
-    applied.** Confirmed via Log Analytics
-    (`ContainerAppConsoleLogs_CL`, workspace `nex-prod-services-law`):
-    every ~6.5 min (13:30, 13:37, 13:43, 13:49, 13:56...) the `webfrontend`
-    subprocess is hit with `SIGKILL; not expected`, supervisord cascades a
-    full shutdown of all 7 subprocesses ("Baserow was stopped or one of
-    it's services crashed"), then restarts. A periodic SIGKILL (not
-    SIGTERM) is the OOM-killer's signature. Cause: `nex-prod-baserow-ca`
-    is sized at 0.5 CPU / 1Gi, running Baserow's all-in-one image (Django
-    backend, Node/Nuxt webfrontend, Redis, 3 Celery workers, Caddy — 7
-    processes); Baserow's own docs recommend 2-4GB for this image.
-    `nex-prod-docuseal-ca` runs fine at the identical 0.5/1Gi because
-    DocuSeal is a single lightweight process — ruling out Postgres or the
-    TLS work as the cause. This is a pre-existing sizing bug, only now
-    visible because the custom domain is finally reachable.
-    Platform-level `healthState`/`runningState` on the revision reads
-    `Healthy`/`RunningAtMaxScale` throughout — that's container/probe
-    level only and does **not** indicate the app is actually serving
-    requests; don't trust it alone for this app. **Fix, not yet applied
-    (blocked by the Claude Code permission classifier on both Bash and
-    PowerShell — needs a human to run it or approve the permission):**
+  - ~~**`ops.nexamesh.ai` (Baserow): DNS/TLS done, but the app is in an
+    active crash-restart loop**~~ — **resolved 2026-08-20.** Root cause:
+    confirmed via Log Analytics (`ContainerAppConsoleLogs_CL`, workspace
+    `nex-prod-services-law`) — every ~6.5 min (13:30, 13:37, 13:43,
+    13:49, 13:56...) the `webfrontend` subprocess was hit with `SIGKILL;
+    not expected`, supervisord cascaded a full shutdown of all 7
+    subprocesses ("Baserow was stopped or one of it's services crashed"),
+    then restarted. A periodic SIGKILL (not SIGTERM) is the OOM-killer's
+    signature. Cause: `nex-prod-baserow-ca` was sized at 0.5 CPU / 1Gi,
+    running Baserow's all-in-one image (Django backend, Node/Nuxt
+    webfrontend, Redis, 3 Celery workers, Caddy — 7 processes); Baserow's
+    own docs recommend 2-4GB for this image. `nex-prod-docuseal-ca` ran
+    fine at the identical 0.5/1Gi because DocuSeal is a single
+    lightweight process — ruling out Postgres or the TLS work as the
+    cause. Pre-existing sizing bug, only visible once the custom domain
+    became reachable for health-checking. Note for future debugging:
+    platform-level `healthState`/`runningState` on the revision read
+    `Healthy`/`RunningAtMaxScale` throughout the crash loop — that's
+    container/probe level only, not proof the app is serving requests.
+    **Fix applied by the domain owner:**
     ```
     az containerapp update -n nex-prod-baserow-ca -g nex-prod-services-rg --cpu 1.0 --memory 2Gi
     ```
-    0.5/1Gi → 1.0/2Gi is a valid Consumption-plan combo; non-destructive,
-    reversible, modest cost increase. Until this runs,
-    `https://ops.nexamesh.ai/` will intermittently hang/timeout depending
-    on where in the cycle a request lands.
+    New revision `nex-prod-baserow-ca--0000002` came up on 1.0 CPU / 2Gi
+    (ephemeral storage auto-bumped to 4Gi). Confirmed stable: 12
+    consecutive clean `302` responses over a 12-minute watch (past the
+    prior crash cadence twice over), and Log Analytics shows **zero**
+    crash/SIGKILL entries tagged to `--0000002` — the one crash-signature
+    log line seen right at cutover was the **old** revision `--0000001`
+    being torn down during deprovisioning, not a recurrence.
   - DNS records for `ops`/`sign` (CNAME + `asuid` TXT) live in the
     destination zone (`nex-prod-shared-rg`, `nexamesh-sub`), confirmed
     propagated publicly (Google/Cloudflare resolvers + RDAP) as of the
