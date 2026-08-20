@@ -277,29 +277,53 @@ was not authorized to make:
   layer" — matches the completed Subtask 3 (`ab1e7ce6`) work documented in
   `docs/inventory/dns.md`; no further action needed there.
 - **`nexamesh.ai` and any remaining `neuralliquid` DNS need to move to a "new
-  sub"** — the exact mechanism (a dedicated Azure subscription, a Cloudflare
-  account the same way `neuralliquid.ai` moved, or something else) was
-  **not specified and is not decided by this document**. Recording the
-  three live readings rather than picking one:
-  1. Give `nexamesh.ai` its own Cloudflare cutover, mirroring
-     `neuralliquid.ai`'s pattern exactly (decouples the domain from any
-     Azure subscription, sovereignty-agnostic).
-  2. Move `nexamesh.ai`'s DNS into a dedicated Azure subscription
-     (new or existing) under Nexamesh's own control.
-  3. Move `nexamesh.ai` into `neuralliquid-sub` specifically.
+  sub"** — three readings were originally recorded here rather than decided:
+  (1) Cloudflare cutover mirroring `neuralliquid.ai`, (2) a dedicated Azure
+  subscription under Nexamesh's own control, (3) folding into
+  `neuralliquid-sub` directly. Reading 3 conflicts with a standing ruling
+  (Baton task `387d5c34`, referencing `6ed39c8a-86f8-4599-a7be-e506dd637e3b`
+  in `mystira-workspace`: *"Do not place Nexamesh/nexamesh-core into any of
+  the four NeuralLiquid product slots... inclusion anywhere must not imply
+  NeuralLiquid ownership."*) and was ruled out on that basis.
 
-  **Reading 3 conflicts with a standing ruling.** Baton task `387d5c34`
-  (this project) documents an explicit prior decision, from task
-  `6ed39c8a-86f8-4599-a7be-e506dd637e3b` (`mystira-workspace` project): *"Do
-  not place Nexamesh/nexamesh-core into any of the four NeuralLiquid product
-  slots... inclusion anywhere must not imply NeuralLiquid ownership."*
-  Nexamesh is its own 100%-user-IP org, distinct from NeuralLiquid (see
-  `docs/handoffs/2026-08-16-session-handoff.md` §2). Folding `nexamesh.ai`
-  into `neuralliquid-sub` would contradict that ruling unless it's
-  explicitly revisited first. Reading 1 (Cloudflare) is the safest default
-  by precedent and by this ruling, but this document does not decide it —
-  flagging for the next session or for direct user confirmation before any
-  `nexamesh.ai` DNS work is executed.
+  **Resolved 2026-08-20 (later in this session): reading 2, refined.** The
+  user's direction: *"nexamesh.ai needs a new sub in the celladore tenant"*
+  — a **new, dedicated Azure subscription** provisioned under tenant
+  `5384ef74-e517-4b22-9472-df990f61e8b5` ("Celladore Systems"), the same
+  tenant that already hosts `neuralliquid-sub`
+  (`5a95ddee-dd63-441a-8306-c8b0803dcdd4`) and `celladore-sub`
+  (`614e6f86-e401-4bdf-8479-a59986e18815`) — but as its **own** subscription,
+  not folded into either existing one. This does not trip the `387d5c34`
+  ruling: that ruling is about GitHub-org/product-slot ownership (not
+  placing Nexamesh under a NeuralLiquid product), not about which Azure
+  *tenant* hosts the billing/RBAC boundary. A tenant hosting three
+  organizationally-distinct subscriptions (Celladore's own, NeuralLiquid's,
+  and now Nexamesh's) is a hosting-convenience fact, not an ownership claim.
+
+  **Feasibility checked live, 2026-08-20:** `smit.jurie@gmail.com` (default
+  identity in tenant `5384ef74-...`) has an **Active** Microsoft Customer
+  Agreement billing account (`27f304a2-801f-5c0c-bfcf-23193983a6d3:...`,
+  account type `Individual`, `hasReadAccess: true`) with one **Active**
+  billing profile (`MBHA-C5V7-BG7-PGB`, USD, "Microsoft Azure Plan" SKU
+  enabled). This is the billing scope `az account subscription create`
+  needs — subscription creation is technically feasible from this identity.
+  The invoice-section ID under that profile (the exact `--billing-scope`
+  value the create call needs) was **not** resolved this pass — the CLI
+  command tried (`az billing invoice-section list`) doesn't exist in the
+  installed `az` version; needs the correct command name or the Portal.
+
+  **Not yet executed — needs explicit go-ahead before creating:** actually
+  running `az account subscription create` attaches a new billing entity
+  under a real payment method; this session stopped short of it pending
+  confirmation of the subscription display name and the invoice-section
+  scope. Same caution for the follow-on idea raised in the same exchange —
+  **a `nexamesh-org` GitHub repo**, mirroring the `neuralliquid-org` /
+  `celladore-org` control-plane-repo pattern (see
+  `docs/handoffs/2026-08-16-session-handoff.md` §3). Checked live: the
+  `Nexamesh` GitHub org already exists (created 2026-03-25, holds only the
+  public `nexamesh-core` repo) — no `nexamesh-org` repo yet, so this would
+  be a genuinely new repo, not a rename/relocation. Raised by the user as
+  "probably" needed, not yet confirmed as a firm decision.
 
 ## Verdict on the 2026-08-19 tiered inventory
 
@@ -463,10 +487,14 @@ confirmed live and unchanged. Add to it:
   (`curl` code `000`). Root cause not diagnosed — likely a custom-domain/cert
   binding issue on the `nex-prod-shared-rg` Static Web App; needs scope
   expansion to that RG to confirm.
-- **New 2026-08-20:** the mechanism for moving `nexamesh.ai` off mystira-sub
-  ("new sub" per user direction) is unresolved — see the three readings
-  recorded in the scoping-decision section above, including a conflict with
-  a standing ruling against folding Nexamesh into NeuralLiquid ownership.
+- ~~The mechanism for moving `nexamesh.ai` off mystira-sub~~ — **resolved
+  2026-08-20 (later in session)**: new dedicated Azure subscription in the
+  Celladore tenant (`5384ef74-e517-4b22-9472-df990f61e8b5`), feasibility
+  confirmed (active MCA billing profile), not yet created — see the
+  scoping-decision section above. Still open: the exact invoice-section
+  billing scope, the subscription display name, and whether a companion
+  `nexamesh-org` GitHub repo (raised same exchange, not yet confirmed) also
+  gets created.
 
 ---
 
