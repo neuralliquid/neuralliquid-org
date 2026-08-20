@@ -432,18 +432,12 @@ decision to split the two services onto separate hostnames.
 - **Fix the `docs.nexamesh.ai` binding failure on the *destination* SWA
   from the start** — no reason to carry the Failed-binding bug forward into
   a fresh resource; this is a chance to not reproduce it.
-- **New blocker found 2026-08-20 (continuation): resolve the
-  DocuSeal/Docusaurus conflict before recreating `nex-prod-docs-swa`.**
-  `nl-prod-hov-app`'s live app settings expect a **DocuSeal** e-signature
-  API at `docs.nexamesh.ai/api`, but the only thing ever deployed to that
-  hostname is the Docusaurus docs site above — no API surface exists there,
-  and no other DocuSeal infrastructure is documented anywhere in
-  `mystira-sub`. Rebuilding `nex-prod-docs-swa` as-is would faithfully
-  reproduce a resource that doesn't do what HOV needs from it. Needs the
-  domain owner to say which is true: (a) DocuSeal was never actually stood
-  up and HOV's config is aspirational/stale, (b) DocuSeal runs elsewhere
-  (self-hosted or SaaS) and only the routing was never wired up, or (c)
-  something else. Don't silently pick one when scaffolding Phase 1.
+- ~~**Blocker found 2026-08-20 (continuation): DocuSeal/Docusaurus
+  conflict**~~ — **resolved same day (user decision, see "Open items"
+  below):** `docs.nexamesh.ai` keeps Docusaurus unchanged; DocuSeal gets its
+  own hostname, `sign.nexamesh.ai`, self-hosted on Azure Container Apps.
+  `nex-prod-docs-swa` recreation is therefore *not* blocked on this — no
+  DocuSeal routing to reconcile into the SWA.
 
 ### Phase 2 — Verify destination in isolation
 - Every DNS record re-verified by querying the new zone's own
@@ -458,7 +452,33 @@ decision to split the two services onto separate hostnames.
   Confirm `nexamesh.ai`'s registrar and current NS delegation first (RDAP
   lookup), same method used for `neuralliquid.ai` (Dynadot, confirmed via
   RDAP).
-- Flip NS to the new `nexamesh-sub` zone's four Azure DNS nameservers.
+  - **Confirmed 2026-08-20 (RDAP + public resolver, read-only):** registrar
+    is **GoDaddy.com, LLC** (IANA registrar ID 146; registrant/admin/tech
+    contacts proxied via Domains By Proxy). Current live NS delegation is
+    the *source* zone in `mys-global-shared-rg`: `ns1-01.azure-dns.com.` /
+    `ns2-01.azure-dns.net.` / `ns3-01.azure-dns.org.` /
+    `ns4-01.azure-dns.info.` (note the `-01` suffix). Domain registered
+    2025-07-23, expires 2027-07-23, standard registrar-lock status codes
+    only (transfer/delete/renew/update client-prohibited) — nothing
+    unusual.
+  - **Destination zone's four nameservers (the actual NS-flip target,
+    confirmed 2026-08-20 via `az network dns zone show`)** — these differ
+    from the source zone's, per the note in Phase 1: `ns1-02.azure-dns.com.`
+    / `ns2-02.azure-dns.net.` / `ns3-02.azure-dns.org.` /
+    `ns4-02.azure-dns.info.` (note the `-02` suffix).
+- Flip NS to the new `nexamesh-sub` zone's four Azure DNS nameservers above.
+- **Ordering constraint, confirmed 2026-08-20 — do not flip NS yet.** The
+  destination zone in `nexamesh-sub` currently holds only 6 record sets:
+  the default `@` NS/SOA pair, plus `ops` (CNAME), `asuid.ops` (TXT),
+  `sign` (CNAME), `asuid.sign` (TXT) — no apex alias, no `www`, no `docs`,
+  no verification TXTs. Phase 1's SWA recreation + full record mirror has
+  **not** been built yet (blocked on the destination SWAs not existing —
+  see Phase 1 above). Flipping NS in this state would take `nexamesh.ai`
+  apex, `www`, and `docs` offline immediately, since the new zone has no
+  records for them. Phase 2's own gate ("custom domain bindings on both
+  SWAs confirmed `Ready`... before touching the registrar") is the
+  enforcement mechanism for this — re-verify it holds before recommending
+  Phase 3 to the domain owner, not just before actually running it.
 - Full end-to-end verification against a public resolver (all hostnames:
   apex, `www`, `docs`, plus `ops` once that gap is separately resolved)
   before considering the cutover closed.
@@ -486,11 +506,25 @@ decision to split the two services onto separate hostnames.
   provisioned and healthy** — both `nex-prod-baserow-ca` and
   `nex-prod-docuseal-ca` confirmed `Healthy`/`RunningAtMaxScale` on an
   external Postgres Flexible Server; see "Standing up Baserow and DocuSeal"
-  above for exact state. Still outstanding: DNS records for
-  `ops.nexamesh.ai`/`sign.nexamesh.ai` and `nl-prod-hov-app`'s
-  `DOCUSEAL_URL` update.
+  above for exact state. **DNS records for `ops`/`sign` created 2026-08-20**
+  in the destination zone (`nex-prod-shared-rg`, `nexamesh-sub`) — CNAME +
+  `asuid` TXT for each, pointing at the container apps' FQDNs. Custom-domain
+  binding + TLS on the container apps is blocked until Phase 3 (see below).
+  Still outstanding: `nl-prod-hov-app`'s `DOCUSEAL_URL` update — deliberately
+  deferred until `sign.nexamesh.ai` is confirmed actually resolving.
 - **Registrar login** — user-only action, same as the `neuralliquid.ai`
-  precedent.
+  precedent. **Not yet ready to execute** — see the Phase 3 ordering
+  constraint above: the destination zone only has the `ops`/`sign` records
+  today, so flipping NS now would break the live `nexamesh.ai` apex, `www`,
+  and `docs`. The temporary-mirror-into-the-old-zone option (write just the
+  2 `ops`/`sign` record pairs into the source zone in `mys-global-shared-rg`
+  instead of waiting for full Phase 3) was raised and explicitly declined by
+  the domain owner earlier 2026-08-20 — but that decision was made when
+  "wait for Phase 3" looked like a short wait. Now that Phase 3 is confirmed
+  blocked on the full Phase 1 mirror (not yet started, itself blocked on the
+  DocuSeal/Docusaurus-conflict question having been resolved but the SWAs
+  not yet recreated), it may be worth re-raising with the owner rather than
+  treating it as settled.
 - **New, larger question raised 2026-08-20 (user, mid-session):** should
   `nl-prod-hov-app` (HOV) itself move from `neuralliquid-sub`/NeuralLiquid
   into `nexamesh-sub`/`nexamesh-org`, given its only two non-Mystira runtime
