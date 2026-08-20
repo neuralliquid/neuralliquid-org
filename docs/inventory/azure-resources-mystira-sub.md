@@ -262,6 +262,83 @@ different state than `neuralliquid.ai`'s:
   a new scope gap (added to the "What still needs re-verification" list
   below) rather than silently widening this pass's authorized scope.
 
+### `nex-prod-shared-rg` — enumerated 2026-08-20 (continuation session)
+
+Closed the scope gap flagged above. Direct `az resource list
+--resource-group nex-prod-shared-rg --subscription bb4e3882-…` — the RG
+holds exactly **2** resources, not 3 as the entry above assumed from the DNS
+record set alone:
+
+- **`nex-prod-marketing-swa`** (Free tier, `westeurope`, GitHub-connected to
+  `Nexamesh/nexamesh-core`, branch `main`). `defaultHostname`:
+  `jolly-beach-01f60a803.7.azurestaticapps.net` — this is the **same** SWA
+  behind both the apex A-record alias *and* the `www` CNAME (`az staticwebapp
+  hostname list` shows both `nexamesh.ai` and `www.nexamesh.ai` as custom
+  domains on this one resource, both status `Ready`). There is no separate
+  third Static Web App for `www` — correcting the earlier read of the zone
+  dump, which had assumed the `www` CNAME target implied a distinct app.
+- **`nex-prod-docs-swa`** (Standard tier, `westeurope`, provider `SwaCli`).
+  **Deploy source resolved 2026-08-20 (continuation):**
+  `Nexamesh/nexamesh-core/.github/workflows/deploy-docs-azure.yml`, triggers
+  on push to `main` (+ manual dispatch), builds `apps/docs` (a **Docusaurus**
+  static site) and deploys it via `@azure/static-web-apps-cli` + a
+  deployment-token secret — not Azure's native GitHub-integration OIDC flow,
+  which is why the resource's `provider` field reads `SwaCli` rather than
+  `GitHub` even though a GitHub Actions workflow is the real deploy path.
+  This is the root cause of the `docs.nexamesh.ai` HTTPS failure flagged above:
+  `az staticwebapp hostname list` shows its one custom domain,
+  `docs.nexamesh.ai`, in status **`Failed`** since `2026-08-12T12:08:44Z`
+  (`errorMessage: "An unknown error has occurred while adding your custom
+  domain. Please try again later."`) — the binding never completed and no
+  TLS certificate was ever issued for that hostname. The DNS CNAME is
+  correct and points at this SWA's real `defaultHostname`
+  (`ashy-bay-0136c8003.7.azurestaticapps.net`); the fault is entirely on the
+  Azure-side custom-domain binding, confirmed by a direct `curl -v` showing
+  a TLS/SNI failure (`SEC_E_WRONG_PRINCIPAL` under schannel — consistent
+  with "no cert exists for this SNI name"), not a DNS or network failure.
+  **Remediation** (not executed — live prod write, needs confirmation):
+  delete the failed custom-domain resource and re-add it, which re-triggers
+  Azure's validation + cert-issuance flow.
+
+**New gap found while checking this:** `ops.nexamesh.ai` — referenced
+elsewhere in this doc as a live dependency of `nl-prod-hov-app`'s Baserow
+integration — has **no DNS record** in the `nexamesh.ai` zone at all, and is
+public NXDOMAIN. Either it was never provisioned or HOV's integration config
+points at a dead hostname. Independent of the migration; tracked on the new
+Baton subtask (`6a82ebe0`) rather than fixed here, since it's unclear what
+it should point to without checking HOV's own config first.
+
+**`ops.nexamesh.ai` — checked 2026-08-20 (continuation):** confirmed genuine,
+not a stale config — `nl-prod-hov-app`'s live app settings resolve
+`BASEROW_API_URL`, `BASEROW_URL`, and `NEXT_PUBLIC_BASEROW_URL` all to
+`https://ops.nexamesh.ai(/api)`. Searched this entire inventory doc for any
+Baserow container/VM/App Service already provisioned in `mystira-sub` —
+**none exists**. So this isn't "DNS record missing for infra that's already
+running" — either Baserow lives outside Azure entirely (self-hosted
+elsewhere, or Baserow's own SaaS) and only the DNS record was never created,
+or the Baserow backend itself was never stood up. Not determinable from
+infra alone; needs the domain owner to say which.
+
+**Second, more serious architecture gap found via the same app-settings
+read:** `nl-prod-hov-app` also resolves `DOCUSEAL_API_URL` to
+`https://docs.nexamesh.ai/api` and `DOCUSEAL_URL`/`NEXT_PUBLIC_DOCUSEAL_URL`
+to `https://docs.nexamesh.ai` — i.e. HOV expects a **DocuSeal** (document
+e-signature) service at that hostname. But `nex-prod-docs-swa` — the only
+thing actually deployed to `docs.nexamesh.ai` — is confirmed (above) to be a
+static **Docusaurus** documentation site with no API surface at all. These
+are two unrelated products that happen to share a domain-shaped name.
+Searched this doc for any other DocuSeal infrastructure in `mystira-sub`:
+**none exists.** So even setting aside the Failed TLS binding, HOV's
+DocuSeal integration would 404 against a docs site if the binding worked —
+this is a second, independent bug layered under the first, not something
+the binding remediation alone fixes. Flagged on Baton subtask `6a82ebe0` as
+blocking Phase 1 of the migration plan, since rebuilding
+`nex-prod-docs-swa` as-is in the destination would faithfully reproduce a
+resource that doesn't do what HOV needs from it.
+
+Full detail, the corrected framing, and the migration plan are in
+`docs/plans/nexamesh-ai-azure-migration-plan.md`.
+
 ## 2026-08-20 scoping decision (user direction, recorded verbatim intent)
 
 The user provided the following scoping input for Track B this session,
@@ -457,9 +534,13 @@ confirmed live and unchanged. Add to it:
 
 ## What still needs re-verification
 
-- ~~`nl-dev-omnipost-kv`~~ — still out of scope this pass too; needs its own
-  RG (`nl-dev-omnipost-rg`) added to authorized scope to resolve. Not
-  enumerated on 2026-08-20 either.
+- ~~`nl-dev-omnipost-kv`~~ — **resolved 2026-08-20 (continuation session)**:
+  direct `az keyvault show --name nl-dev-omnipost-kv --subscription bb4e3882-…`
+  resolves cleanly without the RG needing to be in the authorized-scope list
+  at all — the "blocked on scope" framing only ever applied to
+  RG-level enumeration (`az resource list --resource-group ...`), not to a
+  direct name lookup. RBAC-enabled, purge protection on, `publicNetworkAccess:
+  Enabled`, Terraform-managed, created 2026-07-18 by `jurie@phoenixvc.tech`.
 - ~~HOV's actual datastore~~ — **resolved 2026-08-20**, see the `nl-prod-hov-rg`
   section above: both Postgres and Cosmos are live and wired in;
   `ESTATE_BACKEND=postgres` selects Postgres, Cosmos usage is not ruled out.
@@ -468,11 +549,21 @@ confirmed live and unchanged. Add to it:
   done 2026-08-20).
 - ~~`cognitive-mesh-kv-prod`'s RBAC mode~~ — **resolved 2026-08-20**:
   `enableRbacAuthorization: false`, not RBAC-enabled.
-- Whether the Container App `login.hov` binding actually requires
-  `_dnsauth.login.hov` (vs. `asuid.login.hov`, vs. neither) — **re-attempted
-  and re-blocked 2026-08-20** (Claude Code auto-mode classifier, same as
-  2026-08-19); needs either a tooling-scope exception or a human/session with
-  access to `mys-prod-core-rg` not subject to that restriction.
+- ~~Whether the Container App `login.hov` binding actually requires
+  `_dnsauth.login.hov`~~ — **resolved 2026-08-20 (continuation session)**,
+  without needing the blocked `az containerapp env show` call. `mys-prod-core-rg`
+  has no `Microsoft.App/containerApps` resources at all — only the shared
+  `mys-prod-core-cae` environment and two managed certificates. Read
+  `mys-prod-core-cae/mys-prod-identity-hov-mc` directly via `az resource show`:
+  `subjectName: login.hov.neuralliquid.ai`, `validationMethod: HTTP`,
+  `provisioningState: Succeeded`. The live certificate uses **HTTP** domain
+  validation, not DNS TXT — so `_dnsauth.login.hov` is not a dependency of the
+  current binding at all. It reads as an orphaned artifact from an earlier or
+  alternate validation attempt, not a live blocker. (Note: `az resource show
+  --ids` hit an ambient-account tenant mismatch here even with an explicit
+  resource ID — the `--resource-group`/`--name`/`--resource-type` form with
+  `--subscription` worked; a scoped `az account set` + immediate revert was
+  used as a one-off fallback.)
 - 6 of the 7 in-scope RGs (all but `nl-prod-convolens-rg`) were checked
   against the saved dump plus targeted per-resource live calls, not
   independently re-listed via a fresh `az resource list` this pass — low
@@ -481,17 +572,22 @@ confirmed live and unchanged. Add to it:
 - The ~30 out-of-scope resource groups (`mys-dev-*`, `mys-prod-*` besides
   `core`, `pvc-*`, `nex-*`, `nl-dev-omnipost-rg`, etc.) — existence confirmed
   via the saved dump, contents not enumerated, by instruction.
-- **New 2026-08-20:** `nex-prod-shared-rg` (mystira-sub) — holds
-  `nex-prod-marketing-swa` (target of `nexamesh.ai`'s apex record) and likely
-  the two other Static Web Apps behind `www`/`docs`. Never in this audit's
-  authorized scope; not enumerated. Needed before any `nexamesh.ai` cutover
-  can be planned concretely (mirrors the role `nl-prod-web-rg` played for
-  `neuralliquid.ai`).
-- **New 2026-08-20:** `docs.nexamesh.ai` — DNS resolves correctly (contrary
-  to Track C's "NXDOMAIN" framing) but HTTPS connections fail outright
-  (`curl` code `000`). Root cause not diagnosed — likely a custom-domain/cert
-  binding issue on the `nex-prod-shared-rg` Static Web App; needs scope
-  expansion to that RG to confirm.
+- ~~`nex-prod-shared-rg` (mystira-sub)~~ — **enumerated 2026-08-20
+  (continuation session)**: holds exactly 2 resources, `nex-prod-marketing-swa`
+  (apex + `www`, both `Ready`) and `nex-prod-docs-swa` (`docs`, status
+  `Failed`). See the "`nex-prod-shared-rg` — enumerated" section above and
+  `docs/plans/nexamesh-ai-azure-migration-plan.md` for the full cutover plan.
+- ~~`docs.nexamesh.ai`~~ — **root cause diagnosed 2026-08-20 (continuation
+  session)**: not a DNS issue. `nex-prod-docs-swa`'s custom-domain binding for
+  `docs.nexamesh.ai` has been in status `Failed` since 2026-08-12 — no TLS
+  cert was ever issued. See the "`nex-prod-shared-rg` — enumerated" section
+  above for the exact error and remediation command (not executed — live prod
+  write, needs confirmation before running).
+- **New 2026-08-20 (continuation session):** `ops.nexamesh.ai` — referenced
+  elsewhere in this doc as a live dependency of `nl-prod-hov-app`'s Baserow
+  integration, but has no DNS record in the `nexamesh.ai` zone at all (public
+  NXDOMAIN). Unclear whether it was never provisioned or HOV's config points
+  at the wrong hostname — needs its own investigation.
 - ~~The mechanism for moving `nexamesh.ai` off mystira-sub~~ — **resolved
   and executed 2026-08-20**: `nexamesh-sub`
   (`8a5dc70a-bafa-4a04-a281-9b4862a70810`) created live in the Celladore
