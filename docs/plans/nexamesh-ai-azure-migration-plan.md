@@ -193,6 +193,128 @@ sign-off before provisioning either.
   routine (volume snapshot, or point at Azure Database for PostgreSQL
   Flexible Server instead of the embedded DB if that matters for either
   service's data). Worth an explicit decision, not a default.
+**Provisioning status (2026-08-20, continuation session): partially built,
+live in `nexamesh-sub`.** Executed directly (greenfield, empty subscription,
+no live traffic depends on any of it):
+
+- RG `nex-prod-services-rg` — **note the region deviates from the `nex-`
+  convention's usual `westeurope`**: this subscription is brand-new and
+  Azure rejected `westeurope` for both the storage account and the Log
+  Analytics workspace with `RequestDisallowedByAzure: selected region is
+  currently not accepting new customers`. `northeurope` was accepted and
+  used for every resource below instead. Worth re-checking `westeurope`
+  eligibility later (new-subscription restrictions sometimes lift once
+  there's billing history) before assuming `northeurope` is permanent.
+- Storage account `nexprodsvcstorage` (Standard_LRS) with two Azure Files
+  shares: `baserow-data`, `docuseal-data` (20 GiB quota each).
+- Log Analytics workspace `nex-prod-services-law`.
+- Container Apps environment `nex-prod-services-cae`, with both file shares
+  registered as environment-level storage mounts.
+
+**Blocked, not executed:** the final `az containerapp create` step for both
+apps — Claude Code's auto-mode classifier denied the command outright (a
+separate guardrail from the domain owner's go-ahead on the approach; not
+worked around). Manifests below are ready to run as-is by whoever has
+permission — the user directly, or a session with this action allowlisted:
+
+<details>
+<summary><code>nex-prod-baserow-ca</code> — <code>az containerapp create --yaml baserow-ca.yaml</code></summary>
+
+```yaml
+location: northeurope
+resourceGroup: nex-prod-services-rg
+type: Microsoft.App/containerApps
+name: nex-prod-baserow-ca
+properties:
+  environmentId: /subscriptions/8a5dc70a-bafa-4a04-a281-9b4862a70810/resourceGroups/nex-prod-services-rg/providers/Microsoft.App/managedEnvironments/nex-prod-services-cae
+  configuration:
+    ingress:
+      external: true
+      targetPort: 80
+      transport: auto
+      allowInsecure: false
+    activeRevisionsMode: Single
+  template:
+    containers:
+      - image: baserow/baserow:1-all-in-one
+        name: baserow
+        resources:
+          cpu: 0.5
+          memory: 1Gi
+        env:
+          - name: BASEROW_PUBLIC_URL
+            value: https://ops.nexamesh.ai
+        volumeMounts:
+          - volumeName: baserow-data
+            mountPath: /baserow/data
+    volumes:
+      - name: baserow-data
+        storageType: AzureFile
+        storageName: baserow-data
+    scale:
+      minReplicas: 1
+      maxReplicas: 1
+```
+
+</details>
+
+<details>
+<summary><code>nex-prod-docuseal-ca</code> — <code>az containerapp create --yaml docuseal-ca.yaml</code></summary>
+
+```yaml
+location: northeurope
+resourceGroup: nex-prod-services-rg
+type: Microsoft.App/containerApps
+name: nex-prod-docuseal-ca
+properties:
+  environmentId: /subscriptions/8a5dc70a-bafa-4a04-a281-9b4862a70810/resourceGroups/nex-prod-services-rg/providers/Microsoft.App/managedEnvironments/nex-prod-services-cae
+  configuration:
+    secrets:
+      - name: secret-key-base
+        value: "<generate fresh — do not reuse any value written to a doc; e.g. `openssl rand -hex 64`>"
+    ingress:
+      external: true
+      targetPort: 3000
+      transport: auto
+      allowInsecure: false
+    activeRevisionsMode: Single
+  template:
+    containers:
+      - image: docuseal/docuseal:latest
+        name: docuseal
+        resources:
+          cpu: 0.5
+          memory: 1Gi
+        env:
+          - name: SECRET_KEY_BASE
+            secretRef: secret-key-base
+          - name: HOST
+            value: sign.nexamesh.ai
+        volumeMounts:
+          - volumeName: docuseal-data
+            mountPath: /data
+    volumes:
+      - name: docuseal-data
+        storageType: AzureFile
+        storageName: docuseal-data
+    scale:
+      minReplicas: 1
+      maxReplicas: 1
+```
+
+</details>
+
+After creation: verify both against their default `*.azurecontainerapps.io`
+hostnames first. Custom-domain binding for `ops.nexamesh.ai` /
+`sign.nexamesh.ai` needs a DNS record — **that record has to go in the
+currently-authoritative zone in `mys-global-shared-rg`** (a live-prod DNS
+write, not yet confirmed) until the full zone migration below reaches Phase
+3, at which point it moves with everything else. Wiring `nl-prod-hov-app`'s
+`DOCUSEAL_URL`/`DOCUSEAL_API_URL` to the new `sign.nexamesh.ai` hostname
+(instead of `docs.nexamesh.ai`) is a separate, later, explicitly-confirmed
+step — it's a live production app's config, per the user's 2026-08-20
+decision to split the two services onto separate hostnames.
+
 - **Placement:** both belong in the *destination* (`nexamesh-sub`), as part
   of this migration's Phase 1 — not built in `mystira-sub` first and moved
   later. This also directly resolves the DocuSeal/Docusaurus hostname
@@ -274,15 +396,13 @@ sign-off before provisioning either.
   by the domain owner.
 - ~~`nex-prod-docs-swa`'s actual deploy source~~ — **resolved 2026-08-20**,
   see Phase 1 above.
-- **DocuSeal/Docusaurus conflict at `docs.nexamesh.ai`** — new, gates Phase
-  1 for `nex-prod-docs-swa` specifically (marketing SWA is unaffected).
-- **`ops.nexamesh.ai`** — narrowed 2026-08-20: confirmed a genuine live
-  dependency (`nl-prod-hov-app`'s Baserow env vars), and confirmed no
-  Baserow infra exists anywhere in `mystira-sub` today. Still needs the
-  domain owner to say whether Baserow is hosted outside Azure (just needs a
-  DNS record) or needs to be provisioned as new infra — should be resolved
-  (or explicitly deferred) before Phase 3 so the cutover doesn't quietly
-  drop a hostname a live NeuralLiquid workload depends on.
+- ~~DocuSeal/Docusaurus conflict at `docs.nexamesh.ai`~~ — **resolved
+  2026-08-20 (user decision):** keep Docusaurus at `docs.nexamesh.ai`
+  unchanged; DocuSeal gets its own new hostname, `sign.nexamesh.ai`.
+- ~~`ops.nexamesh.ai` / Baserow hosting~~ — **resolved 2026-08-20 (user
+  decision):** self-host on Azure Container Apps in `nexamesh-sub`.
+  Partially provisioned — see "Standing up Baserow and DocuSeal" above for
+  exact state and what's still blocked.
 - **Registrar login** — user-only action, same as the `neuralliquid.ai`
   precedent.
 - **New, larger question raised 2026-08-20 (user, mid-session):** should
