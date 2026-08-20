@@ -511,16 +511,51 @@ decision to split the two services onto separate hostnames.
   2026-08-20 (user decision):** keep Docusaurus at `docs.nexamesh.ai`
   unchanged; DocuSeal gets its own new hostname, `sign.nexamesh.ai`.
 - ~~`ops.nexamesh.ai` / Baserow hosting~~ — **resolved 2026-08-20 (user
-  decision):** self-host on Azure Container Apps in `nexamesh-sub`. **Fully
-  provisioned and healthy** — both `nex-prod-baserow-ca` and
-  `nex-prod-docuseal-ca` confirmed `Healthy`/`RunningAtMaxScale` on an
-  external Postgres Flexible Server; see "Standing up Baserow and DocuSeal"
-  above for exact state. **DNS records for `ops`/`sign` created 2026-08-20**
-  in the destination zone (`nex-prod-shared-rg`, `nexamesh-sub`) — CNAME +
-  `asuid` TXT for each, pointing at the container apps' FQDNs. Custom-domain
-  binding + TLS on the container apps is blocked until Phase 3 (see below).
-  Still outstanding: `nl-prod-hov-app`'s `DOCUSEAL_URL` update — deliberately
-  deferred until `sign.nexamesh.ai` is confirmed actually resolving.
+  decision):** self-host on Azure Container Apps in `nexamesh-sub`. NS
+  cutover completed same day (see Phase 3); custom-domain binding +
+  managed TLS cert done for both hostnames
+  (`az containerapp hostname add` / `hostname bind --validation-method
+  CNAME`, both `bindingType: SniEnabled`, certs `Succeeded`).
+  - **`sign.nexamesh.ai` (DocuSeal): fully healthy.** Confirmed end-to-end —
+    resolves, TLS valid, direct HTTPS request returns a real `302`.
+  - **`ops.nexamesh.ai` (Baserow): DNS/TLS done, but the app is in an
+    active crash-restart loop — root cause found 2026-08-20, fix not yet
+    applied.** Confirmed via Log Analytics
+    (`ContainerAppConsoleLogs_CL`, workspace `nex-prod-services-law`):
+    every ~6.5 min (13:30, 13:37, 13:43, 13:49, 13:56...) the `webfrontend`
+    subprocess is hit with `SIGKILL; not expected`, supervisord cascades a
+    full shutdown of all 7 subprocesses ("Baserow was stopped or one of
+    it's services crashed"), then restarts. A periodic SIGKILL (not
+    SIGTERM) is the OOM-killer's signature. Cause: `nex-prod-baserow-ca`
+    is sized at 0.5 CPU / 1Gi, running Baserow's all-in-one image (Django
+    backend, Node/Nuxt webfrontend, Redis, 3 Celery workers, Caddy — 7
+    processes); Baserow's own docs recommend 2-4GB for this image.
+    `nex-prod-docuseal-ca` runs fine at the identical 0.5/1Gi because
+    DocuSeal is a single lightweight process — ruling out Postgres or the
+    TLS work as the cause. This is a pre-existing sizing bug, only now
+    visible because the custom domain is finally reachable.
+    Platform-level `healthState`/`runningState` on the revision reads
+    `Healthy`/`RunningAtMaxScale` throughout — that's container/probe
+    level only and does **not** indicate the app is actually serving
+    requests; don't trust it alone for this app. **Fix, not yet applied
+    (blocked by the Claude Code permission classifier on both Bash and
+    PowerShell — needs a human to run it or approve the permission):**
+    ```
+    az containerapp update -n nex-prod-baserow-ca -g nex-prod-services-rg --cpu 1.0 --memory 2Gi
+    ```
+    0.5/1Gi → 1.0/2Gi is a valid Consumption-plan combo; non-destructive,
+    reversible, modest cost increase. Until this runs,
+    `https://ops.nexamesh.ai/` will intermittently hang/timeout depending
+    on where in the cycle a request lands.
+  - DNS records for `ops`/`sign` (CNAME + `asuid` TXT) live in the
+    destination zone (`nex-prod-shared-rg`, `nexamesh-sub`), confirmed
+    propagated publicly (Google/Cloudflare resolvers + RDAP) as of the
+    Phase 3 NS cutover below.
+  - Still outstanding, deliberately deferred: `nl-prod-hov-app`'s
+    `DOCUSEAL_URL`/`DOCUSEAL_API_URL` update to `sign.nexamesh.ai` — the
+    precondition (confirmed resolving + serving DocuSeal) is now met, but
+    this is a live-production-app config change and has not been
+    requested or made.
 - **Registrar login** — user-only action, same as the `neuralliquid.ai`
   precedent. **Ready to execute — domain owner decision 2026-08-20:** go
   ahead and flip NS now without waiting for the Phase 1 mirror; the
