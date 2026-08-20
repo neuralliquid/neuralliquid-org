@@ -312,18 +312,23 @@ was not authorized to make:
   command tried (`az billing invoice-section list`) doesn't exist in the
   installed `az` version; needs the correct command name or the Portal.
 
-  **Not yet executed — needs explicit go-ahead before creating:** actually
-  running `az account subscription create` attaches a new billing entity
-  under a real payment method; this session stopped short of it pending
-  confirmation of the subscription display name and the invoice-section
-  scope. Same caution for the follow-on idea raised in the same exchange —
-  **a `nexamesh-org` GitHub repo**, mirroring the `neuralliquid-org` /
-  `celladore-org` control-plane-repo pattern (see
-  `docs/handoffs/2026-08-16-session-handoff.md` §3). Checked live: the
-  `Nexamesh` GitHub org already exists (created 2026-03-25, holds only the
-  public `nexamesh-core` repo) — no `nexamesh-org` repo yet, so this would
-  be a genuinely new repo, not a rename/relocation. Raised by the user as
-  "probably" needed, not yet confirmed as a firm decision.
+  **Executed and confirmed live, 2026-08-20 (user confirmed both by name):**
+  - **`nexamesh-sub`** — created via `az account alias create` against the
+    invoice-section billing scope above (`az account subscription create`
+    does not exist in this CLI's `account` extension; `az account alias
+    create` is the actual mechanism for MCA-scope subscription creation).
+    Subscription ID `8a5dc70a-bafa-4a04-a281-9b4862a70810`, confirmed
+    `Enabled`, tenant `5384ef74-e517-4b22-9472-df990f61e8b5` ("Celladore
+    Systems"), owner `smit.jurie@gmail.com` — verified via `az account list
+    --refresh` after creation (the subscription is not immediately visible
+    without a refresh). Nothing has been provisioned inside it yet — it's an
+    empty subscription, ready for `nexamesh.ai`'s DNS zone and whatever
+    Nexamesh compute eventually moves off mystira-sub.
+  - **`nexamesh-org`** — created at `https://github.com/Nexamesh/nexamesh-org`
+    (private, matching the more recent `celladore-org` precedent rather than
+    the older public `neuralliquid-org`), mirroring the control-plane-repo
+    pattern from `docs/handoffs/2026-08-16-session-handoff.md` §3. Empty
+    beyond the initial repo creation — no scaffolding/docs added yet.
 
 ## Verdict on the 2026-08-19 tiered inventory
 
@@ -488,13 +493,12 @@ confirmed live and unchanged. Add to it:
   binding issue on the `nex-prod-shared-rg` Static Web App; needs scope
   expansion to that RG to confirm.
 - ~~The mechanism for moving `nexamesh.ai` off mystira-sub~~ — **resolved
-  2026-08-20 (later in session)**: new dedicated Azure subscription in the
-  Celladore tenant (`5384ef74-e517-4b22-9472-df990f61e8b5`), feasibility
-  confirmed (active MCA billing profile), not yet created — see the
-  scoping-decision section above. Still open: the exact invoice-section
-  billing scope, the subscription display name, and whether a companion
-  `nexamesh-org` GitHub repo (raised same exchange, not yet confirmed) also
-  gets created.
+  and executed 2026-08-20**: `nexamesh-sub`
+  (`8a5dc70a-bafa-4a04-a281-9b4862a70810`) created live in the Celladore
+  tenant, and `nexamesh-org` (`github.com/Nexamesh/nexamesh-org`, private)
+  created alongside it — see the scoping-decision section above. Both are
+  empty/unpopulated; the actual `nexamesh.ai` DNS-zone migration into
+  `nexamesh-sub` is separate follow-on work, not done by this pass.
 
 ---
 
