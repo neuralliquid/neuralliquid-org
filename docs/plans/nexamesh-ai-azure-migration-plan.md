@@ -467,21 +467,30 @@ decision to split the two services onto separate hostnames.
     / `ns2-02.azure-dns.net.` / `ns3-02.azure-dns.org.` /
     `ns4-02.azure-dns.info.` (note the `-02` suffix).
 - Flip NS to the new `nexamesh-sub` zone's four Azure DNS nameservers above.
-- **Ordering constraint, confirmed 2026-08-20 — do not flip NS yet.** The
-  destination zone in `nexamesh-sub` currently holds only 6 record sets:
-  the default `@` NS/SOA pair, plus `ops` (CNAME), `asuid.ops` (TXT),
-  `sign` (CNAME), `asuid.sign` (TXT) — no apex alias, no `www`, no `docs`,
-  no verification TXTs. Phase 1's SWA recreation + full record mirror has
-  **not** been built yet (blocked on the destination SWAs not existing —
-  see Phase 1 above). Flipping NS in this state would take `nexamesh.ai`
-  apex, `www`, and `docs` offline immediately, since the new zone has no
-  records for them. Phase 2's own gate ("custom domain bindings on both
-  SWAs confirmed `Ready`... before touching the registrar") is the
-  enforcement mechanism for this — re-verify it holds before recommending
-  Phase 3 to the domain owner, not just before actually running it.
+- ~~**Ordering constraint — do not flip NS yet**~~ — **waived by the domain
+  owner, 2026-08-20.** As documented, flipping NS before Phase 1's full
+  record mirror exists would take `nexamesh.ai` apex, `www`, and `docs`
+  offline until that mirror is rebuilt. The domain owner explicitly
+  accepted this: current traffic on that apex/`www`/`docs` is low enough
+  ("only me using any nl stuff") that the outage is not a concern, and
+  unblocking `ops`/`sign` (Baserow/DocuSeal TLS) is the actual priority —
+  not waiting on the full site mirror. Flip NS now; rebuild Phase 1 (SWA
+  recreation) afterward, at leisure, not as a precondition. Note: HOV's
+  `docs.nexamesh.ai/api` dependency on DocuSeal is already non-functional
+  today (no DocuSeal API was ever deployed there — see Phase 1 history
+  above), so this decision doesn't newly break anything HOV depends on.
 - Full end-to-end verification against a public resolver (all hostnames:
   apex, `www`, `docs`, plus `ops` once that gap is separately resolved)
   before considering the cutover closed.
+- **Registrar action for the domain owner, ready now:** at GoDaddy, change
+  `nexamesh.ai`'s nameservers from the current `ns1-01.azure-dns.com.` /
+  `ns2-01.azure-dns.net.` / `ns3-01.azure-dns.org.` / `ns4-01.azure-dns.info.`
+  set to the destination zone's `ns1-02.azure-dns.com.` /
+  `ns2-02.azure-dns.net.` / `ns3-02.azure-dns.org.` / `ns4-02.azure-dns.info.`
+  set. Once propagated, run the `containerapp hostname add` / `hostname
+  bind` pair for both `ops.nexamesh.ai` and `sign.nexamesh.ai` (commands in
+  the "Standing up Baserow and DocuSeal" section above) to complete TLS —
+  that's the actual unblock this Phase 3 flip is for.
 
 ### Phase 4 — Decommission source
 - Once 24-48h of stable traffic confirmed on the new zone: remove the old
@@ -513,18 +522,14 @@ decision to split the two services onto separate hostnames.
   Still outstanding: `nl-prod-hov-app`'s `DOCUSEAL_URL` update — deliberately
   deferred until `sign.nexamesh.ai` is confirmed actually resolving.
 - **Registrar login** — user-only action, same as the `neuralliquid.ai`
-  precedent. **Not yet ready to execute** — see the Phase 3 ordering
-  constraint above: the destination zone only has the `ops`/`sign` records
-  today, so flipping NS now would break the live `nexamesh.ai` apex, `www`,
-  and `docs`. The temporary-mirror-into-the-old-zone option (write just the
-  2 `ops`/`sign` record pairs into the source zone in `mys-global-shared-rg`
-  instead of waiting for full Phase 3) was raised and explicitly declined by
-  the domain owner earlier 2026-08-20 — but that decision was made when
-  "wait for Phase 3" looked like a short wait. Now that Phase 3 is confirmed
-  blocked on the full Phase 1 mirror (not yet started, itself blocked on the
-  DocuSeal/Docusaurus-conflict question having been resolved but the SWAs
-  not yet recreated), it may be worth re-raising with the owner rather than
-  treating it as settled.
+  precedent. **Ready to execute — domain owner decision 2026-08-20:** go
+  ahead and flip NS now without waiting for the Phase 1 mirror; the
+  temporary-mirror-into-the-old-zone alternative is moot (declined either
+  way — direct cutover preferred over a workaround). Accepted tradeoff:
+  `nexamesh.ai` apex/`www`/`docs` go offline until Phase 1 is rebuilt in
+  the new zone — current traffic there is low enough not to matter, and
+  unblocking `ops`/`sign` TLS is the actual priority. See the exact NS
+  values and follow-up commands in Phase 3 above.
 - **New, larger question raised 2026-08-20 (user, mid-session):** should
   `nl-prod-hov-app` (HOV) itself move from `neuralliquid-sub`/NeuralLiquid
   into `nexamesh-sub`/`nexamesh-org`, given its only two non-Mystira runtime
