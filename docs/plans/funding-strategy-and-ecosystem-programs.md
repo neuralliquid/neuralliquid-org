@@ -36,14 +36,14 @@ The artificial intelligence and cloud software landscape across emerging markets
 | :--- | :--- | :---:| :---:| :---:| :---:| :---:| :---:| :---:| :---:| :--- |
 | **sluice** | `celladore` | 80% | 8 (L) | 5 | 6 | 9 | **6.9** | **7.3** | **T1** | Live on ACA; OTEL cost streaming pipeline to Docket |
 | **cognitive-mesh** | `neuralliquid` | 60% | 8 (L) | 7 | 8 | 3 | **7.0** | 4.5 | **T2** | HTTP API live; Next.js frontend DNS deploy to `neuralliquid.ai` |
-| **nexamesh** | `nexamesh` | 60% | 6 (M) | 7 | 7 | 2 | **6.1** | 3.6 | **T2** | Physical-world AI platform; current counter-UAS products and HOV vertical |
+| **nexamesh** | `nexamesh` | 60% | 6 (M) | 7 | 7 | 2 | **6.1** | 3.6 | **T2** | Physical-world AI platform; current software-led counter-UAS products and HOV vertical |
 | **baton** | `celladore` | 70% | 6 (M) | 6 | 5 | 7 | **6.0** | **6.4** | **T2** | MCP agent lease endpoints live; bidirectional YAML sync |
 | **celladore-org** | `celladore` | 10% | 8 (L) | 6 | 6 | 8 | **6.2** | 2.5 | **T2** | Org bootstrap, DNS setup (`celladore.ai`), package repo standards |
 | **veritasvault** | `neuralliquid` | 60% | 6 (M) | 6 | 6 | 5 | **5.9** | 4.5 | **T3** | Active development; .NET + Web consolidation |
 | **convolens** | `neuralliquid` | 65% | 6 (M) | 5 | 6 | 6 | **5.8** | **5.8** | **T3** | Live custom domain & TLS; WhatsApp quote commercial pilot |
 | **omnipost** | `neuralliquid` | 40% | 8 (L) | 3 | 5 | 2 | **4.8** | 2.6 | **T4** | App Service deployment; replace broken root domain CNAME |
 | **docket** | `celladore` | 60% | 6 (M) | 2 | 4 | 4 | **4.3** | 4.6 | **T3** | Deployed `/health` 200; Azure billing blob ingestion |
-| **house-of-veritas** | `nexamesh` | 50% | 6 (M) | 3 | 3 | 5 | **4.3** | 4.6 | **T4** | Digital estate control plane live; independent data boundary and NexaMesh integration planned |
+| **house-of-veritas** | `nexamesh` | 50% | 6 (M) | 3 | 3 | 5 | **4.3** | 4.6 | **T4** | Digital estate control plane live; migration requires an isolated datastore and successful independent backup/restore rehearsal |
 | **deck** | `celladore` | 10% | 4 (S) | 4 | 4 | 7 | **3.9** | 2.6 | **T4** | Tauri shell with Service Manager (Sluice/Docket/Baton) |
 
 ---
@@ -159,9 +159,12 @@ Ecosystem Topology
 ├── NeuralLiquid Org (Applied Cognitive Applications & Enterprise AI)
 │   ├── Convolens (AI Observability & Contextual Intelligence)
 │   ├── Omnipost (Multi-Channel Content & Distribution Engine)
-│   ├── Cognitive Mesh (Multi-Agent Neural Coordination Framework)
-│   ├── House of Veritas (Data Provenance & Truth Verification Engine)
-│   └── Nexamesh (Decentralized Agent Mesh & Cognitive Transport Layer)
+│   └── Cognitive Mesh (Multi-Agent Neural Coordination Framework)
+│
+├── NexaMesh Product Family (Physical-World AI)
+│   ├── NexaMesh Core (Sensing, Edge, Evidence & Roadmap Mesh Platform)
+│   ├── SkySnare / AeroNet (Software-Led Counter-UAS Products)
+│   └── House of Veritas (Intelligent Physical-Estate Vertical)
 │
 └── Celladore Org (Developer Platform & Agentic Runtime Stack)
     ├── celladore-org (Organizational Control Plane & Tooling Factory)
@@ -175,7 +178,7 @@ Ecosystem Topology
 ### Strategic Synergy
 * **Celladore** provides the modular, open protocol layer that powers multi-agent handoffs and task execution (integrating directly via MCP tools and event streams).
 * **NeuralLiquid** leverages the Celladore protocol layer as an underlying runtime to build high-margin vertical SaaS and autonomous enterprise applications.
-* **Nexamesh** provides the decentralized peer-to-peer transport bridging agent swarms running on Celladore with the Cognitive Mesh coordination engine.
+* **NexaMesh** provides implemented sensing, edge, and evidence building blocks plus roadmap mesh capabilities for its own product family; it may consume NeuralLiquid and Celladore services through explicit contracts.
 
 ---
 

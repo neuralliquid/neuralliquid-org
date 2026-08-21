@@ -87,8 +87,10 @@ NexaMesh device or edge agent.
   `nexamesh-sub`, not the NexaMesh shared-services resource group.
 - Cross-subscription Terraform state is not repointed. The migration must use a
   new backend and a reviewed rebuild/import/cutover strategy.
-- HOV must leave the NeuralLiquid shared PostgreSQL server during migration so
-  its runtime does not retain a hidden cross-subscription dependency.
+- HOV must leave the NeuralLiquid shared PostgreSQL server for an isolated,
+  independently restorable datastore in `nex-prod-hov-rg`. Cutover requires a
+  successful independent backup/restore rehearsal and explicit acceptance of
+  the restored data boundary.
 - Existing `sign.nexamesh.ai` and `ops.nexamesh.ai` services require explicit
   ownership decisions: shared NexaMesh services with contracts, or HOV-owned
   services moved into the HOV product boundary.

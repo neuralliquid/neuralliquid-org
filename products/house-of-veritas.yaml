@@ -11,12 +11,17 @@ type: platform
 domain: [real-estate, finance, verification, proptech]
 stack: [nextjs, typescript, azure-functions-python, terraform, postgresql]
 description: "Intelligent physical-estate operating system governed by AI; the first vertical product built on NexaMesh."
-product_family: nexamesh
+product_family:
+  name: nexamesh
+  platform: nexamesh-core
+  role: vertical
 platform_relationship: "HOV owns estate state and decisions; NexaMesh supplies trusted physical-world identity, observations, edge execution, transport, and evidence contracts."
 migration:
   status: architecture_accepted_execution_not_authorized
   target_subscription: nexamesh-sub
   target_resource_group: nex-prod-hov-rg
+  independent_restore_required: true
+  backup_restore_rehearsal_required: true
   compatibility_host: hov.neuralliquid.ai
   proposed_product_host: hov.nexamesh.ai
 investability:

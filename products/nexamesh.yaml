@@ -10,7 +10,9 @@ domain: [defense, iot, ai, simulation, mesh]
 stack: [rust, typescript, solana, tauri]
 description: "Physical-world AI platform for trusted sensing, edge execution, mesh transport, and accountable evidence, with House of Veritas as its first vertical product."
 product_family:
+  name: nexamesh
   platform: nexamesh-core
+  role: platform
   vertical_products:
     - house-of-veritas
 investability:

@@ -20,7 +20,6 @@ Under exploration / candidate for `celladore` developer org:
 - Docket (Task ledger & state persistence)
 - Baton (Agent handoff protocol & lease orchestration)
 - Deck (Developer console & operator UI)
-- Nexamesh (P2P agent mesh & decentralized transport)
 
 Product repos continue to own application code and product-specific runtime
 infrastructure. This repo owns the shared control plane: DNS, GitHub/Azure

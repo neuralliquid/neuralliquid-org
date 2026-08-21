@@ -78,8 +78,9 @@ secret exposure, or source deletion.
 
 ### Phase 2: Establish HOV-owned data services
 
-- Provision an independent HOV PostgreSQL server or another explicitly
-  accepted restore boundary in `nex-prod-hov-rg`.
+- Provision an isolated, independently restorable HOV datastore in
+  `nex-prod-hov-rg`. A non-PostgreSQL alternative requires explicit approval,
+  but it may not weaken product isolation or the independent restore contract.
 - Export and restore only the HOV database from `nl-prod-shared-pg`; preserve
   Convolens and the NeuralLiquid shared server.
 - Migrate required HOV storage and Key Vault material using approved secure
@@ -114,6 +115,10 @@ target without changing public DNS.
 
 ### Phase 5: DNS and identity-compatible cutover
 
+- Establish an approved write-stop or equivalent consistency boundary, perform
+  a final synchronization from the source, and re-run row/count/checksum checks
+  before routing production writes to the target. Do not allow target
+  acceptance writes to diverge from the source before this transition.
 - Keep `hov.neuralliquid.ai` as a compatibility hostname initially.
 - If `hov.nexamesh.ai` is approved, provision validation records, hostname
   binding, managed certificate, Auth.js trusted-host settings, and Mystira OIDC
@@ -121,8 +126,9 @@ target without changing public DNS.
 - Lower TTLs only within the approved window and retain a tested rollback
   target.
 
-**Gate:** DNS, TLS, health, authentication redirect, callback, sign-out, and
-legitimate HOV user acceptance all pass on the chosen canonical hostname.
+**Gate:** The final data synchronization and write transition are recorded;
+DNS, TLS, health, authentication redirect, callback, sign-out, and legitimate
+HOV user acceptance all pass on the chosen canonical hostname.
 
 ### Phase 6: Observe, then retire the source
 

@@ -24,8 +24,6 @@ Within this portfolio taxonomy, projects naturally divide into two distinct stra
    - `convolens` (AI Observability & Contextual Intelligence)
    - `omnipost` (Omnichannel Content Distribution & Social Engine)
    - `cognitive-mesh` (Autonomous Multi-Agent Coordination Framework, relaunching as `neuralliquid.ai`)
-   - `house-of-veritas` (superseded by ADR 0004; now a NexaMesh product)
-   - `nexamesh` / `nexamesh-core` (Decentralized mesh transport layer & IoT intelligence, brand `nexamesh.ai`)
 
 2. **Agentic Runtime, Developer Tooling & Workflow Primitives** (Proposed `celladore`):
    - `sluice` (OpenAI-compatible AI gateway on Azure Container Apps with LiteLLM routing; currently `phoenixvc/sluice`)
@@ -33,6 +31,10 @@ Within this portfolio taxonomy, projects naturally divide into two distinct stra
    - `baton` (Human + agent shared task graph, React Kanban UI, MCP server, lease orchestration; currently `phoenixvc/baton`)
    - `deck` (Desktop developer & ops control plane in Tauri; currently `phoenixvc/deck`)
    - `retort` (Windows-first polyglot AI-orchestration framework & agent teams; currently `phoenixvc/retort`)
+
+3. **Physical-World AI Platform & Vertical Products** (`nexamesh`):
+   - `nexamesh-core` (reusable sensing, edge, evidence, and roadmap mesh capabilities; brand `nexamesh.ai`)
+   - `house-of-veritas` (distinct intelligent physical-estate vertical; current digital control plane with physical integration on the roadmap)
 
 ### Motivations for Organizational Separation
 
@@ -70,10 +72,6 @@ graph TD
         RT[Retort: Agent Scaffolding & Quality Gates]
     end
 
-    subgraph Transport ["Decentralized Transport Layer"]
-        NM[Nexamesh: P2P Agent Mesh & Threat Detection]
-    end
-
     subgraph NeuralLiquid ["NeuralLiquid Org (Applied Cognitive Applications)"]
         CV[Convolens]
         OP[Omnipost]
@@ -81,14 +79,14 @@ graph TD
     end
 
     subgraph NexaMeshProducts ["NexaMesh Product Family"]
+        NM[NexaMesh Core: Physical-World AI Platform]
         HV[House of Veritas: Intelligent Physical Estate]
+        NM --> HV
     end
 
     OrgMeta -.-> Celladore
     OrgMeta -.-> NeuralLiquid
-    OrgMeta -.-> Transport
-
-    NM --> HV
+    OrgMeta -.-> NexaMeshProducts
 
     BT --> NM
     SL --> NM

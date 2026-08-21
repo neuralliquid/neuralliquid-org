@@ -252,17 +252,17 @@ management path.
 * **Objective**: Reconstitute `nl-prod-shared-pg` and Key Vaults.
 * **Scope**:
   - Deploy `infra/terraform/shared-data` to `neuralliquid-sub`.
-  - Execute database dumps and restores for NeuralLiquid tenant schemas. Export the HOV database for its separately gated NexaMesh migration, but do not restore it into the NeuralLiquid target server.
+  - Execute database dumps and restores only for approved NeuralLiquid tenant schemas. Do not export HOV data under this plan; export and restore it only after the HOV addendum gates and separate execution approval.
   - Configure Key Vault `nl-prod-shared-kv` with new admin credentials.
 
 ### Subtask 5: Product Runtime Services Cutover (`56298d2c-9e0c-452d-b61c-0f9276781f2a`)
 * **Objective**: Deploy and cutover product runtimes.
 * **Scope**:
   - Deploy Convolens web app and bind TLS certificate.
-  - House of Veritas is excluded; its Next.js and worker runtime follows the separately approved HOV/NexaMesh migration addendum.
+  - House of Veritas is excluded; its Next.js and worker runtime follows the separately gated HOV/NexaMesh migration addendum. Execution remains unauthorized by this plan.
   - Deploy Omnipost App Service (`nl-prod-omnipost-web`).
   - Deploy Cognitive Mesh Next.js frontend + CAE.
-  - Perform synthetic health probes across all 4 production subdomains.
+  - Perform synthetic health probes across the three NeuralLiquid product subdomains. Monitor the existing HOV compatibility endpoint separately without changing it.
 
 ### Subtask 6: Secret & Key Vault Rotation & Access Policy Verification (`8ae9035e-0c16-4ed2-af06-80c9a4b6ea71`)
 * **Objective**: Complete cryptographic and credential isolation.
@@ -275,8 +275,8 @@ management path.
 * **Objective**: Safe deprecation and cost elimination on source subscription.
 * **Scope**:
   - Confirm 24-48 hours of healthy production traffic on `neuralliquid-sub`.
-  - Revoke connection permissions on legacy PostgreSQL instances.
-  - Delete retired resource groups on `mystira-sub` (`nl-prod-convolens-pg`, legacy RGs).
+  - Revoke connection permissions only for migrated NeuralLiquid tenants. Preserve every HOV database permission and shared dependency until the HOV addendum's Phase 6 observation and retirement gate is accepted by both HOV and NeuralLiquid owners.
+  - Delete only enumerated, retired NeuralLiquid resource groups on `mystira-sub` (`nl-prod-convolens-pg`, legacy RGs); exclude HOV resources and any shared resource it still uses.
 
 ---
 
