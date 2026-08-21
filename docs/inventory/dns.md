@@ -68,6 +68,7 @@ in spam without DKIM).
 - Cognitive Mesh currently manages some `neuralliquid.ai` DNS records in its own Terraform.
 - HOV had known manual DNS/cert/binding drift; the `login.hov` piece of that is now corrected in `infra/terraform/dns/main.tf` (2026-08-19) — verify against Cognitive Mesh's own Terraform separately, that wasn't audited in this pass.
 - Convolens DNS, hostname binding, and managed certificate were applied live on 2026-07-17 and still need product Terraform reconciliation.
+- 2026-08-21: an attempted reconciliation pass for the item above hit a disputed value, not a fix — an external task brief claimed the live `convolens` CNAME target is `nl-prod-convolens-web-nl.azurewebsites.net`, which conflicts with this row's `nl-prod-convolens-web.azurewebsites.net` (also what `products/convolens.yaml` and both `infra/terraform/dns*` stacks say). Could not be settled live this session — see `infra/terraform/dns-cloudflare/README.md`'s 2026-08-21 status update for why and what to run instead. Treat the "Current target" cell above as unverified, not confirmed, until someone checks the live zone.
 - Omnipost has Bicep DNS/custom-domain scaffolding, but docs still reference `nexamesh.ai`.
 
 ## Orphaned Azure DNS Zones & Decommissioning

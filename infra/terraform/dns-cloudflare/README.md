@@ -29,6 +29,37 @@ drifting between what's declared and what's live (see the comment on
 `cloudflare_dns_record.product["hov_login"]` in `main.tf`) — check it
 first if the count comes up short.
 
+**Status update, 2026-08-21: convolens target hostname disputed, still
+unresolved — do not pick a side without a live check.** A reconciliation
+pass prompted by a separate DNS-cutover task brief asserted the live
+`convolens` CNAME target is `nl-prod-convolens-web-nl.azurewebsites.net`
+(note the `-nl` suffix). That does **not** match this file's own
+`product_cnames.convolens.record` above, nor
+`infra/terraform/dns/main.tf` (the Azure counterpart), nor
+`docs/inventory/dns.md`, nor `products/convolens.yaml` — all four
+consistently say `nl-prod-convolens-web.azurewebsites.net`, no `-nl`, and
+none of them have been re-verified against the live zone since this
+stack's records were captured on 2026-08-19. This session could not settle
+it: a `CLOUDFLARE_API_TOKEN` was present in the executing agent's
+environment, but the agent's sandbox blocked outbound use of it (a
+detected-credential guard tripped before any request left the process, not
+a missing-token or API error) — no live read of `convolens` or
+`asuid.convolens` happened. This is an open "could not check" gap, not a
+"checked and it matches" result. Resolve by running
+`Resolve-DnsName convolens.neuralliquid.ai` / querying the Cloudflare
+dashboard or API directly (per `docs/runbooks/dns-cutover.md`), then correct
+whichever side turns out to be wrong — this file, or the task brief that
+prompted this note. `terraform validate` against this stack's HCL (provider
+`cloudflare/cloudflare` v5.23.0) does pass either way; this is a data
+question, not a syntax one.
+
+Also confirmed this session: neither `.github/workflows/terraform-dns.yml`
+(Azure `infra/terraform/dns` only) nor `.github/workflows/terraform-validate.yml`
+(bootstrap/tfstate, dns, web, shared-data only) reference this stack or a
+Cloudflare secret at all — no CI job validates, plans, or holds a credential
+for `dns-cloudflare` today. Bringing it into CI is a separate follow-up, not
+done as part of this note.
+
 ## Current Scope
 
 Same 7 product hosts, 7 `asuid.*` validation records, and apex/`www`/`email`
