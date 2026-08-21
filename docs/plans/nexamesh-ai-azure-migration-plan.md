@@ -565,13 +565,11 @@ decision to split the two services onto separate hostnames.
   the new zone — current traffic there is low enough not to matter, and
   unblocking `ops`/`sign` TLS is the actual priority. See the exact NS
   values and follow-up commands in Phase 3 above.
-- **New, larger question raised 2026-08-20 (user, mid-session):** should
-  `nl-prod-hov-app` (HOV) itself move from `neuralliquid-sub`/NeuralLiquid
-  into `nexamesh-sub`/`nexamesh-org`, given its only two non-Mystira runtime
-  dependencies are both Nexamesh's own services (Baserow, DocuSeal)? This is
-  a separate, larger-scope question than this document's DNS/compute
-  cutover — tracked as an open decision on Baton task `387d5c34` rather than
-  folded into this plan. See that task before assuming HOV stays put.
+- **HOV product decision resolved 2026-08-21:** ADR 0004 classifies HOV as a
+  distinct NexaMesh product and targets an isolated HOV boundary in
+  `nexamesh-sub`. That migration remains outside this DNS/compute plan and is
+  governed by `hov-nexamesh-migration-addendum.md`; no Terraform, data, DNS,
+  identity, or repository migration is authorized by this update.
 
 ---
 

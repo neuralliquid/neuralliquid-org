@@ -4,6 +4,11 @@
 
 Proposed / Under Exploration
 
+**Superseded in part:** [ADR 0004](./0004-hov-nexamesh-product-boundary.md)
+reclassifies House of Veritas as a distinct NexaMesh product. The Celladore
+developer-tooling decision and all unrelated product classifications remain
+unchanged.
+
 ## Context
 
 The portfolio architecture defined in [`org-meta`](https://github.com/JustAGhosT/org-meta/blob/main/README.md) (the authoritative intelligence and governance layer for the entire organization portfolio) categorizes systems across four architectural layers:
@@ -19,7 +24,7 @@ Within this portfolio taxonomy, projects naturally divide into two distinct stra
    - `convolens` (AI Observability & Contextual Intelligence)
    - `omnipost` (Omnichannel Content Distribution & Social Engine)
    - `cognitive-mesh` (Autonomous Multi-Agent Coordination Framework, relaunching as `neuralliquid.ai`)
-   - `house-of-veritas` (Data Provenance, Truth, and Verification)
+   - `house-of-veritas` (superseded by ADR 0004; now a NexaMesh product)
    - `nexamesh` / `nexamesh-core` (Decentralized mesh transport layer & IoT intelligence, brand `nexamesh.ai`)
 
 2. **Agentic Runtime, Developer Tooling & Workflow Primitives** (Proposed `celladore`):
@@ -73,12 +78,17 @@ graph TD
         CV[Convolens]
         OP[Omnipost]
         CM[Cognitive Mesh]
-        HV[House of Veritas]
+    end
+
+    subgraph NexaMeshProducts ["NexaMesh Product Family"]
+        HV[House of Veritas: Intelligent Physical Estate]
     end
 
     OrgMeta -.-> Celladore
     OrgMeta -.-> NeuralLiquid
     OrgMeta -.-> Transport
+
+    NM --> HV
 
     BT --> NM
     SL --> NM

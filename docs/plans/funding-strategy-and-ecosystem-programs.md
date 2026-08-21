@@ -21,7 +21,8 @@ The artificial intelligence and cloud software landscape across emerging markets
 3. **Leading Pan-African & DeepTech VC Funds**:
    - **Partech Africa II** ($300M+ fund), **TLcom Capital TIDE Africa II** ($154M fund), **Knife Capital K3 Fund**, **Launch Africa Ventures**, **Global Ventures**, and **Seedstars Africa Ventures**.
 4. **Dual-Organization Architecture & Portfolio Governance**:
-   - **NeuralLiquid**: Applied AI & cognitive solutions (*Convolens, Omnipost, Cognitive Mesh, House of Veritas, Nexamesh*).
+   - **NeuralLiquid**: Applied AI and cognitive services (*Convolens, Omnipost, Cognitive Mesh*).
+   - **NexaMesh**: Physical-world AI platform and product family (*NexaMesh Core, SkySnare, AeroNet, House of Veritas*).
    - **Celladore**: Developer platform, agent task protocol, and event runtime stack (*Sluice, Docket, Baton, Deck, Retort, Celladore-Org*).
    - **Governance & Registry of Record**: Anchored in [`org-meta`](../../org-meta/README.md) with verified 2026-08 investability scores and two-axis tracking (Investability vs Realised utility).
 
@@ -35,14 +36,14 @@ The artificial intelligence and cloud software landscape across emerging markets
 | :--- | :--- | :---:| :---:| :---:| :---:| :---:| :---:| :---:| :---:| :--- |
 | **sluice** | `celladore` | 80% | 8 (L) | 5 | 6 | 9 | **6.9** | **7.3** | **T1** | Live on ACA; OTEL cost streaming pipeline to Docket |
 | **cognitive-mesh** | `neuralliquid` | 60% | 8 (L) | 7 | 8 | 3 | **7.0** | 4.5 | **T2** | HTTP API live; Next.js frontend DNS deploy to `neuralliquid.ai` |
-| **nexamesh** | `nexamesh` | 60% | 6 (M) | 7 | 7 | 2 | **6.1** | 3.6 | **T2** | 294 diligence docs; Docusaurus deploy & docs DNS fix |
+| **nexamesh** | `nexamesh` | 60% | 6 (M) | 7 | 7 | 2 | **6.1** | 3.6 | **T2** | Physical-world AI platform; current counter-UAS products and HOV vertical |
 | **baton** | `celladore` | 70% | 6 (M) | 6 | 5 | 7 | **6.0** | **6.4** | **T2** | MCP agent lease endpoints live; bidirectional YAML sync |
 | **celladore-org** | `celladore` | 10% | 8 (L) | 6 | 6 | 8 | **6.2** | 2.5 | **T2** | Org bootstrap, DNS setup (`celladore.ai`), package repo standards |
 | **veritasvault** | `neuralliquid` | 60% | 6 (M) | 6 | 6 | 5 | **5.9** | 4.5 | **T3** | Active development; .NET + Web consolidation |
 | **convolens** | `neuralliquid` | 65% | 6 (M) | 5 | 6 | 6 | **5.8** | **5.8** | **T3** | Live custom domain & TLS; WhatsApp quote commercial pilot |
 | **omnipost** | `neuralliquid` | 40% | 8 (L) | 3 | 5 | 2 | **4.8** | 2.6 | **T4** | App Service deployment; replace broken root domain CNAME |
 | **docket** | `celladore` | 60% | 6 (M) | 2 | 4 | 4 | **4.3** | 4.6 | **T3** | Deployed `/health` 200; Azure billing blob ingestion |
-| **house-of-veritas** | `neuralliquid` | 50% | 6 (M) | 3 | 3 | 5 | **4.3** | 4.6 | **T4** | Shared Postgres migration; Sluice gateway wiring verified |
+| **house-of-veritas** | `nexamesh` | 50% | 6 (M) | 3 | 3 | 5 | **4.3** | 4.6 | **T4** | Digital estate control plane live; independent data boundary and NexaMesh integration planned |
 | **deck** | `celladore` | 10% | 4 (S) | 4 | 4 | 7 | **3.9** | 2.6 | **T4** | Tauri shell with Service Manager (Sluice/Docket/Baton) |
 
 ---

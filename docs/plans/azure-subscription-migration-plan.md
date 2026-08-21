@@ -4,11 +4,19 @@
 **Priority:** Critical  
 **Goal:** Migrate and isolate all remaining NeuralLiquid cloud infrastructure from the shared/legacy Mystira Azure subscription (`mystira-sub`) to a dedicated, sovereign NeuralLiquid Azure subscription (`neuralliquid-sub`).
 
+> **Scope amendment — 2026-08-21:** House of Veritas is no longer a
+> `neuralliquid-sub` destination. [ADR 0004](../adr/0004-hov-nexamesh-product-boundary.md)
+> classifies HOV as a NexaMesh product, and the
+> [HOV migration addendum](./hov-nexamesh-migration-addendum.md) targets an
+> isolated HOV boundary in `nexamesh-sub`. HOV remains in source inventory and
+> retirement checks because its current runtime and database dependencies still
+> touch this migration's source infrastructure.
+
 ---
 
 ## Strategic Context
 
-NeuralLiquid workloads (*Convolens, Omnipost, Cognitive Mesh, House of Veritas, and shared PostgreSQL/Key Vault resources*) must not share an Azure subscription with Mystira/Eben's infrastructure:
+NeuralLiquid workloads (*Convolens, Omnipost, Cognitive Mesh, and shared PostgreSQL/Key Vault resources*) must not share an Azure subscription with Mystira/Eben's infrastructure. HOV has the same source-isolation requirement but follows the separate NexaMesh target plan linked above:
 1. **Legal & Ownership Isolation**: Clean IP, cost attribution, and SOC2/ISO compliance boundaries.
 2. **Billing & Budget Governance**: Eliminates cross-charging and unlocks direct Azure startup credits via Microsoft Founders Hub without affecting Mystira spend.
 3. **Security & Blast Radius**: Eliminates shared Service Principals, Key Vaults, and IAM admin sprawl.
@@ -30,7 +38,7 @@ flowchart TD
     
     ST4[Subtask 4: cabf4190-aefc-499c-a690-5d9b504bcaa6\nShared Data Plane & Database Migration] --> ST5
     
-    ST5[Subtask 5: 56298d2c-9e0c-452d-b61c-0f9276781f2a\nProduct Runtime Services Cutover] --> ST6
+    ST5[Subtask 5: 56298d2c-9e0c-452d-b61c-0f9276781f2a\nNeuralLiquid Product Runtime Cutover - HOV excluded] --> ST6
     
     ST6[Subtask 6: 8ae9035e-0c16-4ed2-af06-80c9a4b6ea71\nSecret & Key Vault Rotation & Policy Verification] --> ST7
     
@@ -45,7 +53,7 @@ flowchart TD
 * **Objective**: Enumerate all NeuralLiquid resources currently on `mystira-sub`.
 * **Scope**:
   - `convolens`: App Service (`nl-prod-convolens-web`), App Service Plan, Key Vault (`nl-prod-convolens-kv`), legacy PG (`nl-prod-convolens-pg`).
-  - `house-of-veritas`: App Service (`nl-prod-hov-app`), Functions, Key Vault (`nl-prod-hov-kv`).
+  - `house-of-veritas`: source-only inventory of App Service (`nl-prod-hov-app`), Functions, Key Vault (`nl-prod-hov-kv`), and shared dependencies; target execution belongs to the HOV/NexaMesh addendum.
   - `cognitive-mesh`: Container Apps (`cog-dev-rg-san` CAE, `cognitive-mesh-api`), App Service (`cognitive-mesh-frontend-prod`).
   - `shared-data`: PostgreSQL server (`nl-prod-shared-pg`), Key Vault (`nl-prod-shared-kv`), Resource Group (`nl-prod-shared-rg`).
   - `dns`: `neuralliquid.ai` domain validation TXT records (`asuid.*`).
@@ -244,14 +252,14 @@ management path.
 * **Objective**: Reconstitute `nl-prod-shared-pg` and Key Vaults.
 * **Scope**:
   - Deploy `infra/terraform/shared-data` to `neuralliquid-sub`.
-  - Execute database dumps and restores for tenant schemas (`convolens_prod`, `hov_prod`).
+  - Execute database dumps and restores for NeuralLiquid tenant schemas. Export the HOV database for its separately gated NexaMesh migration, but do not restore it into the NeuralLiquid target server.
   - Configure Key Vault `nl-prod-shared-kv` with new admin credentials.
 
 ### Subtask 5: Product Runtime Services Cutover (`56298d2c-9e0c-452d-b61c-0f9276781f2a`)
 * **Objective**: Deploy and cutover product runtimes.
 * **Scope**:
   - Deploy Convolens web app and bind TLS certificate.
-  - Deploy House of Veritas Next.js + Python Function App.
+  - House of Veritas is excluded; its Next.js and worker runtime follows the separately approved HOV/NexaMesh migration addendum.
   - Deploy Omnipost App Service (`nl-prod-omnipost-web`).
   - Deploy Cognitive Mesh Next.js frontend + CAE.
   - Perform synthetic health probes across all 4 production subdomains.

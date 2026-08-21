@@ -8,8 +8,12 @@ NeuralLiquid product set:
 - Convolens
 - Omnipost
 - Cognitive Mesh
-- House of Veritas
 - VeritasVault
+
+House of Veritas is transitioning out of this product set into the NexaMesh
+product family under [ADR 0004](docs/adr/0004-hov-nexamesh-product-boundary.md).
+This repository continues to document its current `neuralliquid.ai` DNS and
+shared-data dependencies until the separately approved migration is complete.
 
 Under exploration / candidate for `celladore` developer org:
 - Sluice (Event streaming & queue routing)
@@ -84,9 +88,11 @@ products/
 - [ADR 0001: Control Plane and Product Repo Boundaries](docs/adr/0001-control-plane-boundaries.md)
 - [ADR 0002: Shared Data Plane Ownership](docs/adr/0002-shared-data-plane-ownership.md)
 - [ADR 0003: Celladore Org Split and Developer Stack](docs/adr/0003-celladore-org-split-exploration.md)
+- [ADR 0004: House of Veritas as a NexaMesh Product](docs/adr/0004-hov-nexamesh-product-boundary.md)
 - [Terraform Control Plane Phases](docs/plans/terraform-control-plane-phases.md)
 - [Funding & Ecosystem Strategy](docs/plans/funding-strategy-and-ecosystem-programs.md)
 - [Azure Subscription Migration Plan & Taskgraph](docs/plans/azure-subscription-migration-plan.md)
+- [HOV to NexaMesh Migration Addendum](docs/plans/hov-nexamesh-migration-addendum.md)
 - [Terraform CI and Apply](docs/runbooks/terraform-ci.md)
 - [Omnipost Terraform Migration Notes](docs/products/omnipost-terraform-migration.md)
 

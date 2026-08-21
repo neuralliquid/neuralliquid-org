@@ -1,6 +1,6 @@
 name: House of Veritas
 org_meta_ref: org-meta/registry/projects.yaml#house-of-veritas
-owner: neuralliquid
+owner: nexamesh
 repo: https://github.com/neuralliquid/house-of-veritas
 brand: hov.neuralliquid.ai
 canonical_host: hov.neuralliquid.ai
@@ -10,7 +10,15 @@ status: active
 type: platform
 domain: [real-estate, finance, verification, proptech]
 stack: [nextjs, typescript, azure-functions-python, terraform, postgresql]
-description: "Estate management platform — Next.js + Azure Functions (Python) + Terraform."
+description: "Intelligent physical-estate operating system governed by AI; the first vertical product built on NexaMesh."
+product_family: nexamesh
+platform_relationship: "HOV owns estate state and decisions; NexaMesh supplies trusted physical-world identity, observations, edge execution, transport, and evidence contracts."
+migration:
+  status: architecture_accepted_execution_not_authorized
+  target_subscription: nexamesh-sub
+  target_resource_group: nex-prod-hov-rg
+  compatibility_host: hov.neuralliquid.ai
+  proposed_product_host: hov.nexamesh.ai
 investability:
   completion: 50
   time_to_launch: "n/a"
@@ -33,5 +41,7 @@ roadmap:
     - Estate document verification and provenance workflow.
 notes:
   - Transferred from JustAGhosT to neuralliquid on 2026-05-14.
+  - Reclassified into the NexaMesh product family by ADR 0004 on 2026-08-21; repository and runtime migration remain pending.
+  - Current production is an estate control plane; sensor, mesh, and edge-agent capabilities remain roadmap work and must not be described as live.
   - Sluice gateway wiring is built and Terraform-injected (SLUICE_BASE_URL and key set in production).
   - DNS records managed by neuralliquid-org.
