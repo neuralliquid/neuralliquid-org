@@ -34,10 +34,12 @@
    - Key Vault `nl-prod-shared-kv` provisioned with admin credentials stored at `postgres-admin-password`.
 
 2. **Network & Firewall Access:**
-   - Define an IP-scoped, session-safe rule name:
+   - Generate a unique session token and rule name, and persist it to handle multi-shell or detached sessions:
      ```bash
      export OPERATOR_IP=$(curl -s https://api.ipify.org)
-     export RULE_NAME="MigrationTempRunner_$(echo "$OPERATOR_IP" | tr '.' '_')"
+     export MIGRATION_SESSION_ID="${MIGRATION_SESSION_ID:-$(date +%Y%m%d%H%M%S)_$RANDOM}"
+     export RULE_NAME="MigrationRunner_${MIGRATION_SESSION_ID}"
+     echo "$RULE_NAME" > .convolens_migration_rule
      ```
    - Add operator/runner IP temporarily to source and target servers:
      ```bash
@@ -213,60 +215,53 @@
 
 ### Phase 7: Cleanup
 
-1. Remove temporary operator firewall rules for the specific operator IP (preserves concurrent migration/recovery sessions):
+1. Remove the session's temporary firewall rule from source and target servers (reconstitutes exact rule name from session file if needed):
    ```bash
-   export OPERATOR_IP="${OPERATOR_IP:-$(curl -s https://api.ipify.org)}"
+   # Reconstitute RULE_NAME from session state file if in a new shell
+   if [ -z "$RULE_NAME" ] && [ -f .convolens_migration_rule ]; then
+     export RULE_NAME=$(cat .convolens_migration_rule)
+   fi
 
-   # Clean up target server firewall rule matching current operator IP
-   TARGET_RULES=$(az postgres flexible-server firewall-rule list \
+   if [ -z "$RULE_NAME" ]; then
+     echo "ERROR: RULE_NAME is not set and .convolens_migration_rule was not found." >&2
+     exit 1
+   fi
+
+   echo "Deleting target temporary firewall rule: $RULE_NAME"
+   az postgres flexible-server firewall-rule delete \
      --subscription 5a95ddee-dd63-441a-8306-c8b0803dcdd4 \
      --resource-group nl-prod-shared-rg \
      --server-name nl-prod-data-pg \
-     --query "[?startIpAddress=='$OPERATOR_IP' && starts_with(name, 'MigrationTempRunner')].name" -o tsv)
+     --name "$RULE_NAME" \
+     --yes
 
-   for r in $TARGET_RULES; do
-     echo "Deleting target temporary firewall rule: $r (IP: $OPERATOR_IP)"
-     az postgres flexible-server firewall-rule delete \
-       --subscription 5a95ddee-dd63-441a-8306-c8b0803dcdd4 \
-       --resource-group nl-prod-shared-rg \
-       --server-name nl-prod-data-pg \
-       --name "$r" \
-       --yes
-   done
-
-   # Clean up source server firewall rule matching current operator IP
-   SOURCE_RULES=$(az postgres flexible-server firewall-rule list \
+   echo "Deleting source temporary firewall rule: $RULE_NAME"
+   az postgres flexible-server firewall-rule delete \
      --subscription bb4e3882-2079-4bab-8974-611bc0b8bb58 \
      --resource-group nl-prod-shared-rg \
      --server-name nl-prod-shared-pg \
-     --query "[?startIpAddress=='$OPERATOR_IP' && starts_with(name, 'MigrationTempRunner')].name" -o tsv)
-
-   for r in $SOURCE_RULES; do
-     echo "Deleting source temporary firewall rule: $r (IP: $OPERATOR_IP)"
-     az postgres flexible-server firewall-rule delete \
-       --subscription bb4e3882-2079-4bab-8974-611bc0b8bb58 \
-       --resource-group nl-prod-shared-rg \
-       --server-name nl-prod-shared-pg \
-       --name "$r" \
-       --yes
-   done
+     --name "$RULE_NAME" \
+     --yes
    ```
 
-2. Confirm zero temporary rules remain on both target and source servers (both outputs must be empty):
+2. Confirm zero temporary rules remain for this session on both target and source servers (both outputs must be empty):
    ```bash
    echo "=== Verifying target server cleanup (should be empty) ==="
    az postgres flexible-server firewall-rule list \
      --subscription 5a95ddee-dd63-441a-8306-c8b0803dcdd4 \
      --resource-group nl-prod-shared-rg \
      --server-name nl-prod-data-pg \
-     --query "[?startIpAddress=='$OPERATOR_IP'].name" -o tsv
+     --query "[?name=='$RULE_NAME'].name" -o tsv
 
    echo "=== Verifying source server cleanup (should be empty) ==="
    az postgres flexible-server firewall-rule list \
      --subscription bb4e3882-2079-4bab-8974-611bc0b8bb58 \
      --resource-group nl-prod-shared-rg \
      --server-name nl-prod-shared-pg \
-     --query "[?startIpAddress=='$OPERATOR_IP'].name" -o tsv
+     --query "[?name=='$RULE_NAME'].name" -o tsv
+
+   # Clean up local session marker
+   rm -f .convolens_migration_rule
    ```
 
 ---
