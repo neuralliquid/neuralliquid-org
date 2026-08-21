@@ -35,7 +35,7 @@ its nameservers rather than assuming this file stays current.
 
 | Product | Host | Current target | Desired target owner | Status |
 | --- | --- | --- | --- | --- |
-| Convolens | `convolens.neuralliquid.ai` | `nl-prod-convolens-web.azurewebsites.net` | Convolens prod frontend App Service | Healthy |
+| Convolens | `convolens.neuralliquid.ai` | `nl-prod-convolens-web-nl.azurewebsites.net` | Convolens prod frontend App Service | Healthy — corrected 2026-08-21, see below |
 | Omnipost | `omnipost.neuralliquid.ai` | `nl-dev-omnipost-web.azurewebsites.net` | Omnipost prod frontend App Service | Healthy — corrected 2026-08-19, see below |
 | Cognitive Mesh | `cognitive-mesh.neuralliquid.ai` | `cognitive-mesh-frontend-prod.azurewebsites.net` | Cognitive Mesh frontend App Service | Healthy |
 | Cognitive Mesh (control) | `control.cognitive-mesh.neuralliquid.ai` | `cognitive-mesh-frontend-prod.azurewebsites.net` | Cognitive Mesh frontend App Service | Healthy |
@@ -68,7 +68,7 @@ in spam without DKIM).
 - Cognitive Mesh currently manages some `neuralliquid.ai` DNS records in its own Terraform.
 - HOV had known manual DNS/cert/binding drift; the `login.hov` piece of that is now corrected in `infra/terraform/dns/main.tf` (2026-08-19) — verify against Cognitive Mesh's own Terraform separately, that wasn't audited in this pass.
 - Convolens DNS, hostname binding, and managed certificate were applied live on 2026-07-17 and still need product Terraform reconciliation.
-- 2026-08-21: an attempted reconciliation pass for the item above hit a disputed value, not a fix — an external task brief claimed the live `convolens` CNAME target is `nl-prod-convolens-web-nl.azurewebsites.net`, which conflicts with this row's `nl-prod-convolens-web.azurewebsites.net` (also what `products/convolens.yaml` and both `infra/terraform/dns*` stacks say). Could not be settled live this session — see `infra/terraform/dns-cloudflare/README.md`'s 2026-08-21 status update for why and what to run instead. Treat the "Current target" cell above as unverified, not confirmed, until someone checks the live zone.
+- 2026-08-21: the convolens CNAME target dispute flagged earlier this same day is now resolved. A direct `nslookup -type=CNAME convolens.neuralliquid.ai` against the live zone returned `nl-prod-convolens-web-nl.azurewebsites.net` — confirming the `-nl` suffix that a prior task brief had asserted but could not verify live. `products/convolens.yaml` and both `infra/terraform/dns*` stacks previously declared the no-suffix form (`nl-prod-convolens-web.azurewebsites.net`); all three have been corrected in this same pass to match live. The "Current target" cell above now reflects the confirmed value, not an assumption.
 - Omnipost has Bicep DNS/custom-domain scaffolding, but docs still reference `nexamesh.ai`.
 
 ## Orphaned Azure DNS Zones & Decommissioning

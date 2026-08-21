@@ -6,8 +6,15 @@ data "azurerm_dns_zone" "neuralliquid" {
 locals {
   product_cnames = {
     convolens = {
-      name   = "convolens"
-      record = "nl-prod-convolens-web.azurewebsites.net"
+      name = "convolens"
+      # Corrected 2026-08-19 -> 2026-08-21: this had been declared without
+      # the `-nl` suffix, matching infra/terraform/dns-cloudflare/main.tf
+      # and docs/inventory/dns.md, but a direct `nslookup -type=CNAME
+      # convolens.neuralliquid.ai` on 2026-08-21 confirmed the live target
+      # carries the suffix. Live is correct; this file was wrong. Do not
+      # revert toward the no-suffix value — same pattern as `hov_login`
+      # below.
+      record = "nl-prod-convolens-web-nl.azurewebsites.net"
       ttl    = 300
     }
     omnipost = {
