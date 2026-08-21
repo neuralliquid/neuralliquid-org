@@ -42,8 +42,8 @@ its nameservers rather than assuming this file stays current.
 | Cognitive Mesh (API) | `api.cognitivemesh.neuralliquid.ai` | `cognitive-mesh-api-prod.azurewebsites.net` | Cognitive Mesh API App Service | Healthy |
 | House of Veritas | `hov.neuralliquid.ai` | `nl-prod-hov-app.azurewebsites.net` | HOV App Service | Healthy |
 | HOV login | `login.hov.neuralliquid.ai` | `mys-prod-identity-api.politeocean-781513ae.southafricanorth.azurecontainerapps.io` | Mystira Identity Container App | Healthy — `infra/terraform/dns/main.tf` had a stale dev App Service target until 2026-08-19; live was already correct |
-| — (apex) | `neuralliquid.ai` | `9.163.40.246` (A) → `nl-prod-web-swa` | `infra/terraform/web` Static Web App | Healthy — a placeholder site distinct from `neuralliquid-web-prod`; see that repo's PRD open decision on apex-vs-subdomain |
-| — (www) | `www.neuralliquid.ai` | `jolly-beach-099205503.7.azurestaticapps.net` → `nl-prod-web-swa` | same as apex | Healthy |
+| — (apex) | `neuralliquid.ai` | `9.163.40.246` (A) → legacy `nl-prod-web-swa` (mystira-sub) | `neuralliquid-web-prod` (`nl-web-rg` on `neuralliquid-sub`) via `docs/runbooks/web-static-app-cutover.md` | Target SWA provisioned in neuralliquid-sub; cutover scheduled via runbook |
+| — (www) | `www.neuralliquid.ai` | `jolly-beach-099205503.7.azurestaticapps.net` → legacy `nl-prod-web-swa` | `neuralliquid-web-prod` (`nl-web-rg` on `neuralliquid-sub`) via `docs/runbooks/web-static-app-cutover.md` | Target SWA provisioned in neuralliquid-sub; cutover scheduled via runbook |
 | — (mail) | `email.neuralliquid.ai` | `eu.mailgun.org` | Mailgun tracking CNAME | Healthy |
 
 **Omnipost correction, 2026-08-19:** this table previously said Omnipost's

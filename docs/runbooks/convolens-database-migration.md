@@ -205,23 +205,45 @@
    ```
 
 ### Phase 7: Cleanup
-1. Remove temporary operator firewall rules from source and target servers using the static `$RULE_NAME`:
+
+1. Remove temporary operator firewall rules from source and target servers (handles new/detached shell sessions automatically):
    ```bash
-   az postgres flexible-server firewall-rule delete \
+   # Clean up target server firewall rules matching MigrationTempRunner*
+   TARGET_RULES=$(az postgres flexible-server firewall-rule list \
      --subscription 5a95ddee-dd63-441a-8306-c8b0803dcdd4 \
      --resource-group nl-prod-shared-rg \
      --server-name nl-prod-data-pg \
-     --name "$RULE_NAME" \
-     --yes
+     --query "[?starts_with(name, 'MigrationTempRunner')].name" -o tsv)
 
-   az postgres flexible-server firewall-rule delete \
+   for r in $TARGET_RULES; do
+     echo "Deleting target temporary firewall rule: $r"
+     az postgres flexible-server firewall-rule delete \
+       --subscription 5a95ddee-dd63-441a-8306-c8b0803dcdd4 \
+       --resource-group nl-prod-shared-rg \
+       --server-name nl-prod-data-pg \
+       --name "$r" \
+       --yes
+   done
+
+   # Clean up source server firewall rules matching MigrationTempRunner*
+   SOURCE_RULES=$(az postgres flexible-server firewall-rule list \
      --subscription bb4e3882-2079-4bab-8974-611bc0b8bb58 \
      --resource-group nl-prod-shared-rg \
      --server-name nl-prod-shared-pg \
-     --name "$RULE_NAME" \
-     --yes
+     --query "[?starts_with(name, 'MigrationTempRunner')].name" -o tsv)
+
+   for r in $SOURCE_RULES; do
+     echo "Deleting source temporary firewall rule: $r"
+     az postgres flexible-server firewall-rule delete \
+       --subscription bb4e3882-2079-4bab-8974-611bc0b8bb58 \
+       --resource-group nl-prod-shared-rg \
+       --server-name nl-prod-shared-pg \
+       --name "$r" \
+       --yes
+   done
    ```
-2. Verify rule removal:
+
+2. Confirm zero temporary rules remain:
    ```bash
    az postgres flexible-server firewall-rule list \
      --subscription 5a95ddee-dd63-441a-8306-c8b0803dcdd4 \
