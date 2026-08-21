@@ -251,9 +251,11 @@ management path.
 ### Subtask 4: Shared Data Plane & Database Migration (`cabf4190-aefc-499c-a690-5d9b504bcaa6`)
 * **Objective**: Reconstitute `nl-prod-shared-pg` and Key Vaults.
 * **Scope**:
-  - Deploy `infra/terraform/shared-data` to `neuralliquid-sub`.
-  - Execute database dumps and restores only for approved NeuralLiquid tenant schemas. Do not export HOV data under this plan; export and restore it only after the HOV addendum gates and separate execution approval.
+  - Deploy `infra/terraform/shared-data` to `neuralliquid-sub` (`5a95ddee-dd63-441a-8306-c8b0803dcdd4`) for `nl-prod-shared-pg` and `nl-prod-shared-rg` in `southafricanorth`.
+  - Strictly enforce HOV exclusion policy (ADR 0004 & task 37547ca3): HOV is excluded from the NeuralLiquid shared data plane; its database on `mystira-sub` remains untouched until the separately approved HOV/NexaMesh migration.
+  - Execute database dumps and restores only for approved NeuralLiquid tenant schemas (`convolens`). See [Convolens Database Migration Runbook](../runbooks/convolens-database-migration.md).
   - Configure Key Vault `nl-prod-shared-kv` with new admin credentials.
+
 
 ### Subtask 5: Product Runtime Services Cutover (`56298d2c-9e0c-452d-b61c-0f9276781f2a`)
 * **Objective**: Deploy and cutover product runtimes.

@@ -1,7 +1,7 @@
 variable "subscription_id" {
   type        = string
   description = "Azure subscription for NeuralLiquid org control-plane state."
-  default     = "bb4e3882-2079-4bab-8974-611bc0b8bb58"
+  default     = "5a95ddee-dd63-441a-8306-c8b0803dcdd4"
 }
 
 variable "location" {

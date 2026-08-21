@@ -1,16 +1,6 @@
 variable "subscription_id" {
   type        = string
-  description = <<-EOT
-    Azure subscription that contains the neuralliquid.ai DNS zone.
-    2026-08-19: points at neuralliquid-sub, the zone recreated there during
-    the org-wide DNS migration (docs/plans/azure-subscription-migration-plan.md,
-    Track B). The old value (bb4e3882-2079-4bab-8974-611bc0b8bb58, the
-    inaccessible legacy subscription) is left below for reference only.
-    This module's backend.tf still points its remote state at that legacy
-    subscription too, so `terraform plan/apply` cannot run here regardless
-    of this value until that's bootstrapped — the live zone was built via
-    `az` CLI directly. Old value: "bb4e3882-2079-4bab-8974-611bc0b8bb58"
-  EOT
+  description = "Azure subscription that contains the neuralliquid.ai DNS zone (neuralliquid-sub)."
   default     = "5a95ddee-dd63-441a-8306-c8b0803dcdd4"
 }
 

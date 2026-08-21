@@ -1,25 +1,25 @@
 variable "subscription_id" {
   type        = string
-  description = "Azure subscription containing the NeuralLiquid production website."
-  default     = "bb4e3882-2079-4bab-8974-611bc0b8bb58"
+  description = "Azure subscription containing the NeuralLiquid production website (neuralliquid-sub)."
+  default     = "5a95ddee-dd63-441a-8306-c8b0803dcdd4"
 }
 
 variable "resource_group_name" {
   type        = string
   description = "Existing resource group containing the Static Web App."
-  default     = "nl-prod-web-rg"
+  default     = "nl-web-rg"
 }
 
 variable "static_web_app_name" {
   type        = string
   description = "Existing production Static Web App name."
-  default     = "nl-prod-web-swa"
+  default     = "neuralliquid-web-prod"
 }
 
 variable "location" {
   type        = string
   description = "Existing Static Web App location."
-  default     = "West Europe"
+  default     = "eastus2"
 }
 
 variable "github_oidc_principal_object_id" {

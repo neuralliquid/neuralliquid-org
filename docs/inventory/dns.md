@@ -69,3 +69,28 @@ in spam without DKIM).
 - HOV had known manual DNS/cert/binding drift; the `login.hov` piece of that is now corrected in `infra/terraform/dns/main.tf` (2026-08-19) — verify against Cognitive Mesh's own Terraform separately, that wasn't audited in this pass.
 - Convolens DNS, hostname binding, and managed certificate were applied live on 2026-07-17 and still need product Terraform reconciliation.
 - Omnipost has Bicep DNS/custom-domain scaffolding, but docs still reference `nexamesh.ai`.
+
+## Orphaned Azure DNS Zones & Decommissioning
+
+### 1. `nl-global-shared-rg` (Subscription: `5a95ddee-dd63-441a-8306-c8b0803dcdd4` / `neuralliquid-sub`)
+- **Status**: Orphaned / Inactive rollback reference.
+- **Details**: Created on 2026-08-19 with 21 record sets across nameservers `ns1-02.azure-dns.com` through `ns4-02.azure-dns.info`. Never delegated at registrar.
+- **Decommissioning / Cleanup Instructions**:
+  1. Verify Cloudflare DNS (`jack.ns.cloudflare.com`, `laylah.ns.cloudflare.com`) remains fully healthy and authoritative for `neuralliquid.ai`.
+  2. Backup zone records (optional):
+     ```bash
+     az network dns zone export --subscription 5a95ddee-dd63-441a-8306-c8b0803dcdd4 --resource-group nl-global-shared-rg --name neuralliquid.ai --file neuralliquid.ai.zone.bak
+     ```
+  3. Delete the Azure DNS zone:
+     ```bash
+     az network dns zone delete --subscription 5a95ddee-dd63-441a-8306-c8b0803dcdd4 --resource-group nl-global-shared-rg --name neuralliquid.ai --yes
+     ```
+  4. If `nl-global-shared-rg` contains no other resources, delete the resource group:
+     ```bash
+     az group delete --subscription 5a95ddee-dd63-441a-8306-c8b0803dcdd4 --name nl-global-shared-rg --yes --no-wait
+     ```
+
+### 2. `mys-global-shared-rg` (Subscription: `bb4e3882-2079-4bab-8974-611bc0b8bb58` / `mystira-sub`)
+- **Status**: Inaccessible / Orphaned legacy zone.
+- **Details**: Pre-migration authoritative zone (`ns*-08.azure-dns.*`). Inaccessible due to subscription credential / tenant boundary isolation. No action possible or needed from current subscription credentials.
+

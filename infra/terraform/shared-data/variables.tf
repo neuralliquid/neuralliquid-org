@@ -1,8 +1,9 @@
 variable "subscription_id" {
   type        = string
   description = "Azure subscription that contains the shared NeuralLiquid data plane."
-  default     = "bb4e3882-2079-4bab-8974-611bc0b8bb58"
+  default     = "5a95ddee-dd63-441a-8306-c8b0803dcdd4"
 }
+
 
 variable "resource_group_name" {
   type        = string
@@ -81,9 +82,17 @@ variable "key_vault_role_assignments" {
 
 variable "tenant_databases" {
   type        = map(string)
-  description = "Databases on the shared server, keyed by owning product. The database is org-owned; its schema, roles and grants are owned by the product that uses it."
+  description = <<-EOT
+    Databases on the shared server, keyed by owning product. The database is org-owned;
+    its schema, roles and grants are owned by the product that uses it.
+
+    NOTE: House of Veritas (HOV) is strictly excluded per ADR 0004 and Baton task
+    37547ca3. HOV is classified as a NexaMesh physical-estate product and its data
+    resides on an isolated datastore in nex-prod-hov-rg under nexamesh-sub. HOV data
+    on mystira-sub remains untouched until its separate, independently authorized migration.
+  EOT
   default = {
-    house_of_veritas = "houseofveritas"
-    convolens        = "convolens"
+    convolens = "convolens"
   }
 }
+

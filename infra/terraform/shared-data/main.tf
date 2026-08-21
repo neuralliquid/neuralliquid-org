@@ -82,17 +82,16 @@ resource "azurerm_postgresql_flexible_server_database" "tenant" {
   }
 }
 
-# Permits Azure-hosted callers only — the HOV App Service and the Convolens
-# container app. Developer access requires a temporary rule, added and removed
-# per use. The name is Azure-generated from the portal action that created it;
-# renaming it would destroy and recreate the rule, briefly cutting both
-# applications off, so it is kept as-is.
+# Permits Azure-hosted callers within Azure IPs — e.g. the Convolens runtime
+# services in neuralliquid-sub. HOV is excluded per ADR 0004 and resides in nexamesh-sub.
+# Developer access requires a temporary rule, added and removed per use.
 resource "azurerm_postgresql_flexible_server_firewall_rule" "allow_azure_services" {
   name             = "AllowAllAzureServicesAndResourcesWithinAzureIps_2026-8-7_2-56-48"
   server_id        = azurerm_postgresql_flexible_server.shared.id
   start_ip_address = "0.0.0.0"
   end_ip_address   = "0.0.0.0"
 }
+
 
 # Org-owned credential store for the shared data plane. It holds secrets that
 # belong to the server rather than to any one tenant — today, the server admin
