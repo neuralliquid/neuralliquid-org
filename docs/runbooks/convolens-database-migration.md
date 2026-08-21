@@ -208,6 +208,7 @@ EOF
      -h nl-prod-data-pg.postgres.database.azure.com \
      -U convolens \
      -d convolens \
+     -v ON_ERROR_STOP=1 \
      -c "
        SELECT current_user, current_database();
        BEGIN;

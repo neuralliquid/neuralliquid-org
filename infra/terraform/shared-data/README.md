@@ -4,7 +4,7 @@ This stack owns the shared NeuralLiquid PostgreSQL server in `neuralliquid-sub` 
 the central data infrastructure for NeuralLiquid workloads.
 
 - resource group: `nl-prod-shared-rg`
-- server: `nl-prod-shared-pg` (PostgreSQL 16, `B_Standard_B1ms`, 32 GB, South Africa North)
+- server: `nl-prod-data-pg` (PostgreSQL 16, `B_Standard_B1ms`, 32 GB, South Africa North)
 - vault: `nl-prod-shared-kv` (RBAC-authorized)
 - subscription: `5a95ddee-dd63-441a-8306-c8b0803dcdd4` (`neuralliquid-sub`)
 
@@ -21,9 +21,9 @@ provider and holds no database credentials.
 | --- | --- | --- | --- |
 | `convolens` | `convolens` | `convolens` | Primary NeuralLiquid tenant |
 
-> **HOV Exclusion Policy (ADR 0004 & Baton 37547ca3):**  
+> **HOV Exclusion Policy (ADR 0004 & Baton 37547ca3):**
 > House of Veritas (`house-of-veritas`) is strictly excluded from `neuralliquid-sub`'s
-> `nl-prod-shared-pg`. Per ADR 0004, HOV is classified as a NexaMesh physical-estate
+> `nl-prod-data-pg`. Per ADR 0004, HOV is classified as a NexaMesh physical-estate
 > product and will be migrated to an isolated datastore in `nex-prod-hov-rg` under
 > `nexamesh-sub` (`8a5dc70a-bafa-4a04-a281-9b4862a70810`). The source `houseofveritas`
 > database on `mystira-sub` remains untouched until that separately authorized migration.
