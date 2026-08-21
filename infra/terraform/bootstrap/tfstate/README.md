@@ -5,8 +5,9 @@ stacks.
 
 ## Resources
 
+- Subscription: `5a95ddee-dd63-441a-8306-c8b0803dcdd4` (`neuralliquid-sub`)
 - Resource group: `nl-org-tfstate-rg`
-- Storage account: `nlorgtfstate`
+- Storage account: `nlorgtfstatesa`
 - Container: `tfstate`
 - Location: `southafricanorth`
 

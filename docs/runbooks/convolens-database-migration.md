@@ -178,13 +178,20 @@
    SELECT count(*) FROM information_schema.tables WHERE table_schema = 'public';
    SELECT count(*) FROM information_schema.sequences WHERE sequence_schema = 'public';
    ```
-3. Test read/write functionality with the tenant role `convolens`:
+3. Test read/write functionality with the tenant role `convolens` via transactional DML:
    ```bash
    PGPASSWORD="$CONVOLENS_ROLE_PW" psql \
      -h nl-prod-data-pg.postgres.database.azure.com \
      -U convolens \
      -d convolens \
-     -c "SELECT current_user, current_database();"
+     -c "
+       SELECT current_user, current_database();
+       BEGIN;
+       CREATE TEMP TABLE _migration_test_rw (id serial PRIMARY KEY, note text);
+       INSERT INTO _migration_test_rw (note) VALUES ('validation_probe');
+       SELECT * FROM _migration_test_rw;
+       ROLLBACK;
+     "
    ```
 4. Verify tenant isolation:
    - Ensure role `convolens` cannot access any other database or public schema.
@@ -245,12 +252,20 @@
    done
    ```
 
-2. Confirm operator IP rules are removed:
+2. Confirm zero temporary rules remain on both target and source servers (both outputs must be empty):
    ```bash
+   echo "=== Verifying target server cleanup (should be empty) ==="
    az postgres flexible-server firewall-rule list \
      --subscription 5a95ddee-dd63-441a-8306-c8b0803dcdd4 \
      --resource-group nl-prod-shared-rg \
      --server-name nl-prod-data-pg \
+     --query "[?startIpAddress=='$OPERATOR_IP'].name" -o tsv
+
+   echo "=== Verifying source server cleanup (should be empty) ==="
+   az postgres flexible-server firewall-rule list \
+     --subscription bb4e3882-2079-4bab-8974-611bc0b8bb58 \
+     --resource-group nl-prod-shared-rg \
+     --server-name nl-prod-shared-pg \
      --query "[?startIpAddress=='$OPERATOR_IP'].name" -o tsv
    ```
 

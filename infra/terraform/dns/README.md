@@ -60,8 +60,9 @@ configurable so either can rotate without changing the other product hosts.
 
 This stack uses the `azurerm` backend declared in `backend.tf`:
 
+- subscription: `5a95ddee-dd63-441a-8306-c8b0803dcdd4` (`neuralliquid-sub`)
 - resource group: `nl-org-tfstate-rg`
-- storage account: `nlorgtfstate`
+- storage account: `nlorgtfstatesa`
 - container: `tfstate`
 - key: `dns/terraform.tfstate`
 

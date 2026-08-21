@@ -52,8 +52,9 @@ Verify by connecting as the new role to another tenant's database and confirming
 
 ## Backend
 
+- subscription: `5a95ddee-dd63-441a-8306-c8b0803dcdd4` (`neuralliquid-sub`)
 - resource group: `nl-org-tfstate-rg`
-- storage account: `nlorgtfstate`
+- storage account: `nlorgtfstatesa`
 - container: `tfstate`
 - key: `shared-data/terraform.tfstate`
 

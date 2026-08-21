@@ -77,48 +77,48 @@ Before routing live domain traffic, the target Static Web App must be seeded wit
 1. **Unbind Custom Domains from Legacy SWA (mystira-sub):**
    ```powershell
    # Unbind www subdomain from legacy SWA
-   az staticwebapp hostname delete \
-     --name nl-prod-web-swa \
-     --resource-group nl-prod-web-rg \
-     --subscription bb4e3882-2079-4bab-8974-611bc0b8bb58 \
-     --hostname www.neuralliquid.ai \
+   az staticwebapp hostname delete `
+     --name nl-prod-web-swa `
+     --resource-group nl-prod-web-rg `
+     --subscription bb4e3882-2079-4bab-8974-611bc0b8bb58 `
+     --hostname www.neuralliquid.ai `
      --yes
 
    # Unbind apex domain from legacy SWA
-   az staticwebapp hostname delete \
-     --name nl-prod-web-swa \
-     --resource-group nl-prod-web-rg \
-     --subscription bb4e3882-2079-4bab-8974-611bc0b8bb58 \
-     --hostname neuralliquid.ai \
+   az staticwebapp hostname delete `
+     --name nl-prod-web-swa `
+     --resource-group nl-prod-web-rg `
+     --subscription bb4e3882-2079-4bab-8974-611bc0b8bb58 `
+     --hostname neuralliquid.ai `
      --yes
    ```
 
 2. **Register Custom Domains on Target SWA (neuralliquid-sub):**
    ```powershell
    # Apex domain registration
-   az staticwebapp hostname set \
-     --name neuralliquid-web-prod \
-     --resource-group nl-web-rg \
-     --subscription 5a95ddee-dd63-441a-8306-c8b0803dcdd4 \
-     --hostname neuralliquid.ai \
+   az staticwebapp hostname set `
+     --name neuralliquid-web-prod `
+     --resource-group nl-web-rg `
+     --subscription 5a95ddee-dd63-441a-8306-c8b0803dcdd4 `
+     --hostname neuralliquid.ai `
      --validation-method dns-txt-token
 
    # Subdomain www registration
-   az staticwebapp hostname set \
-     --name neuralliquid-web-prod \
-     --resource-group nl-web-rg \
-     --subscription 5a95ddee-dd63-441a-8306-c8b0803dcdd4 \
-     --hostname www.neuralliquid.ai \
+   az staticwebapp hostname set `
+     --name neuralliquid-web-prod `
+     --resource-group nl-web-rg `
+     --subscription 5a95ddee-dd63-441a-8306-c8b0803dcdd4 `
+     --hostname www.neuralliquid.ai `
      --validation-method cname-delegation
    ```
 
 3. **Retrieve Validation Token:**
    ```powershell
-   az staticwebapp hostname show \
-     --name neuralliquid-web-prod \
-     --resource-group nl-web-rg \
-     --subscription 5a95ddee-dd63-441a-8306-c8b0803dcdd4 \
-     --hostname neuralliquid.ai \
+   az staticwebapp hostname show `
+     --name neuralliquid-web-prod `
+     --resource-group nl-web-rg `
+     --subscription 5a95ddee-dd63-441a-8306-c8b0803dcdd4 `
+     --hostname neuralliquid.ai `
      --query validationToken -o tsv
    ```
 
@@ -129,27 +129,27 @@ Before routing live domain traffic, the target Static Web App must be seeded wit
    - **Apex A Record (`@`):** Ensure pointing to Azure Static Web Apps front-door IP (`9.163.40.246`).
    - Ensure all Cloudflare records remain **DNS only (grey-clouded / unproxied)**.
 
-4. **Trigger Validation & TLS Issuance:**
+5. **Trigger Validation & TLS Issuance:**
    ```powershell
-   az staticwebapp hostname validate \
-     --name neuralliquid-web-prod \
-     --resource-group nl-web-rg \
-     --subscription 5a95ddee-dd63-441a-8306-c8b0803dcdd4 \
+   az staticwebapp hostname validate `
+     --name neuralliquid-web-prod `
+     --resource-group nl-web-rg `
+     --subscription 5a95ddee-dd63-441a-8306-c8b0803dcdd4 `
      --hostname neuralliquid.ai
 
-   az staticwebapp hostname validate \
-     --name neuralliquid-web-prod \
-     --resource-group nl-web-rg \
-     --subscription 5a95ddee-dd63-441a-8306-c8b0803dcdd4 \
+   az staticwebapp hostname validate `
+     --name neuralliquid-web-prod `
+     --resource-group nl-web-rg `
+     --subscription 5a95ddee-dd63-441a-8306-c8b0803dcdd4 `
      --hostname www.neuralliquid.ai
    ```
 
-5. **Confirm Hostname Status:**
+6. **Confirm Hostname Status:**
    ```powershell
-   az staticwebapp hostname list \
-     --name neuralliquid-web-prod \
-     --resource-group nl-web-rg \
-     --subscription 5a95ddee-dd63-441a-8306-c8b0803dcdd4 \
+   az staticwebapp hostname list `
+     --name neuralliquid-web-prod `
+     --resource-group nl-web-rg `
+     --subscription 5a95ddee-dd63-441a-8306-c8b0803dcdd4 `
      -o table
    ```
    Both hostnames (`neuralliquid.ai` and `www.neuralliquid.ai`) must reach status **`Ready`**.
