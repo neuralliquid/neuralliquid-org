@@ -34,12 +34,34 @@
    - Key Vault `nl-prod-shared-kv` provisioned with admin credentials stored at `postgres-admin-password`.
 
 2. **Network & Firewall Access:**
-   - Generate a unique session token and rule name, and persist it to handle multi-shell or detached sessions:
+   - Discover public IP with strict timeout and HTTP failure handling:
      ```bash
-     export OPERATOR_IP=$(curl -s https://api.ipify.org)
+     OPERATOR_IP=$(curl -fsSL --max-time 10 https://api.ipify.org 2>/dev/null || curl -fsSL --max-time 10 https://ifconfig.me/ip 2>/dev/null)
+     if [ -z "$OPERATOR_IP" ]; then
+       echo "ERROR: Failed to discover operator public IP. Ensure outbound HTTPS connectivity." >&2
+       exit 1
+     fi
+     export OPERATOR_IP
+     ```
+   - Generate a session token, derive an absolute state-file path, and atomically initialize the session:
+     ```bash
      export MIGRATION_SESSION_ID="${MIGRATION_SESSION_ID:-$(date +%Y%m%d%H%M%S)_$RANDOM}"
+     export MIGRATION_STATE_DIR="${MIGRATION_STATE_DIR:-$HOME/.neuralliquid/migration_sessions}"
+     mkdir -p "$MIGRATION_STATE_DIR"
+     export MIGRATION_STATE_FILE="${MIGRATION_STATE_FILE:-$MIGRATION_STATE_DIR/convolens_${MIGRATION_SESSION_ID}.state}"
+
+     if [ -e "$MIGRATION_STATE_FILE" ]; then
+       echo "ERROR: Migration state file $MIGRATION_STATE_FILE already exists. Choose a distinct session ID." >&2
+       exit 1
+     fi
+
      export RULE_NAME="MigrationRunner_${MIGRATION_SESSION_ID}"
-     echo "$RULE_NAME" > .convolens_migration_rule
+     cat <<EOF > "$MIGRATION_STATE_FILE"
+RULE_NAME=$RULE_NAME
+MIGRATION_SESSION_ID=$MIGRATION_SESSION_ID
+OPERATOR_IP=$OPERATOR_IP
+CREATED_AT=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+EOF
      ```
    - Add operator/runner IP temporarily to source and target servers:
      ```bash
@@ -218,12 +240,21 @@
 1. Remove the session's temporary firewall rule from source and target servers (reconstitutes exact rule name from session file if needed):
    ```bash
    # Reconstitute RULE_NAME from session state file if in a new shell
-   if [ -z "$RULE_NAME" ] && [ -f .convolens_migration_rule ]; then
-     export RULE_NAME=$(cat .convolens_migration_rule)
+   if [ -z "$RULE_NAME" ]; then
+     if [ -n "$MIGRATION_STATE_FILE" ] && [ -f "$MIGRATION_STATE_FILE" ]; then
+       export RULE_NAME=$(grep '^RULE_NAME=' "$MIGRATION_STATE_FILE" | cut -d'=' -f2)
+     else
+       # Search in standard state directory for the session file
+       LATEST_STATE=$(ls -t "$HOME/.neuralliquid/migration_sessions"/convolens_*.state 2>/dev/null | head -n 1)
+       if [ -n "$LATEST_STATE" ] && [ -f "$LATEST_STATE" ]; then
+         export MIGRATION_STATE_FILE="$LATEST_STATE"
+         export RULE_NAME=$(grep '^RULE_NAME=' "$MIGRATION_STATE_FILE" | cut -d'=' -f2)
+       fi
+     fi
    fi
 
    if [ -z "$RULE_NAME" ]; then
-     echo "ERROR: RULE_NAME is not set and .convolens_migration_rule was not found." >&2
+     echo "ERROR: RULE_NAME is not set and no valid migration state file was found." >&2
      exit 1
    fi
 
@@ -244,24 +275,40 @@
      --yes
    ```
 
-2. Confirm zero temporary rules remain for this session on both target and source servers (both outputs must be empty):
+2. Confirm zero temporary rules remain for this session on both target and source servers (both queries must succeed and return empty):
    ```bash
-   echo "=== Verifying target server cleanup (should be empty) ==="
-   az postgres flexible-server firewall-rule list \
+   echo "=== Verifying target server cleanup (must be empty) ==="
+   TARGET_REMAINDER=$(az postgres flexible-server firewall-rule list \
      --subscription 5a95ddee-dd63-441a-8306-c8b0803dcdd4 \
      --resource-group nl-prod-shared-rg \
      --server-name nl-prod-data-pg \
-     --query "[?name=='$RULE_NAME'].name" -o tsv
+     --query "[?name=='$RULE_NAME'].name" -o tsv)
+   TARGET_STATUS=$?
 
-   echo "=== Verifying source server cleanup (should be empty) ==="
-   az postgres flexible-server firewall-rule list \
+   echo "=== Verifying source server cleanup (must be empty) ==="
+   SOURCE_REMAINDER=$(az postgres flexible-server firewall-rule list \
      --subscription bb4e3882-2079-4bab-8974-611bc0b8bb58 \
      --resource-group nl-prod-shared-rg \
      --server-name nl-prod-shared-pg \
-     --query "[?name=='$RULE_NAME'].name" -o tsv
+     --query "[?name=='$RULE_NAME'].name" -o tsv)
+   SOURCE_STATUS=$?
 
-   # Clean up local session marker
-   rm -f .convolens_migration_rule
+   if [ $TARGET_STATUS -ne 0 ] || [ -n "$TARGET_REMAINDER" ]; then
+     echo "ERROR: Target firewall rule $RULE_NAME still present or query failed on target server!" >&2
+     exit 1
+   fi
+
+   if [ $SOURCE_STATUS -ne 0 ] || [ -n "$SOURCE_REMAINDER" ]; then
+     echo "ERROR: Source firewall rule $RULE_NAME still present or query failed on source server!" >&2
+     exit 1
+   fi
+
+   echo "SUCCESS: Temporary firewall rule $RULE_NAME verified removed from both servers."
+
+   # Safely remove session state file only after verified teardown
+   if [ -n "$MIGRATION_STATE_FILE" ] && [ -f "$MIGRATION_STATE_FILE" ]; then
+     rm -f "$MIGRATION_STATE_FILE"
+   fi
    ```
 
 ---
