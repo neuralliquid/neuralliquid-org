@@ -34,10 +34,10 @@
    - Key Vault `nl-prod-shared-kv` provisioned with admin credentials stored at `postgres-admin-password`.
 
 2. **Network & Firewall Access:**
-   - Define a static, timestamped rule name for reliable cleanup across calendar days:
+   - Define an IP-scoped, session-safe rule name:
      ```bash
-     export RULE_NAME="MigrationTempRunner_$(date +%Y%m%d_%H%M%S)"
      export OPERATOR_IP=$(curl -s https://api.ipify.org)
+     export RULE_NAME="MigrationTempRunner_$(echo "$OPERATOR_IP" | tr '.' '_')"
      ```
    - Add operator/runner IP temporarily to source and target servers:
      ```bash
@@ -206,17 +206,19 @@
 
 ### Phase 7: Cleanup
 
-1. Remove temporary operator firewall rules from source and target servers (handles new/detached shell sessions automatically):
+1. Remove temporary operator firewall rules for the specific operator IP (preserves concurrent migration/recovery sessions):
    ```bash
-   # Clean up target server firewall rules matching MigrationTempRunner*
+   export OPERATOR_IP="${OPERATOR_IP:-$(curl -s https://api.ipify.org)}"
+
+   # Clean up target server firewall rule matching current operator IP
    TARGET_RULES=$(az postgres flexible-server firewall-rule list \
      --subscription 5a95ddee-dd63-441a-8306-c8b0803dcdd4 \
      --resource-group nl-prod-shared-rg \
      --server-name nl-prod-data-pg \
-     --query "[?starts_with(name, 'MigrationTempRunner')].name" -o tsv)
+     --query "[?startIpAddress=='$OPERATOR_IP' && starts_with(name, 'MigrationTempRunner')].name" -o tsv)
 
    for r in $TARGET_RULES; do
-     echo "Deleting target temporary firewall rule: $r"
+     echo "Deleting target temporary firewall rule: $r (IP: $OPERATOR_IP)"
      az postgres flexible-server firewall-rule delete \
        --subscription 5a95ddee-dd63-441a-8306-c8b0803dcdd4 \
        --resource-group nl-prod-shared-rg \
@@ -225,15 +227,15 @@
        --yes
    done
 
-   # Clean up source server firewall rules matching MigrationTempRunner*
+   # Clean up source server firewall rule matching current operator IP
    SOURCE_RULES=$(az postgres flexible-server firewall-rule list \
      --subscription bb4e3882-2079-4bab-8974-611bc0b8bb58 \
      --resource-group nl-prod-shared-rg \
      --server-name nl-prod-shared-pg \
-     --query "[?starts_with(name, 'MigrationTempRunner')].name" -o tsv)
+     --query "[?startIpAddress=='$OPERATOR_IP' && starts_with(name, 'MigrationTempRunner')].name" -o tsv)
 
    for r in $SOURCE_RULES; do
-     echo "Deleting source temporary firewall rule: $r"
+     echo "Deleting source temporary firewall rule: $r (IP: $OPERATOR_IP)"
      az postgres flexible-server firewall-rule delete \
        --subscription bb4e3882-2079-4bab-8974-611bc0b8bb58 \
        --resource-group nl-prod-shared-rg \
@@ -243,13 +245,13 @@
    done
    ```
 
-2. Confirm zero temporary rules remain:
+2. Confirm operator IP rules are removed:
    ```bash
    az postgres flexible-server firewall-rule list \
      --subscription 5a95ddee-dd63-441a-8306-c8b0803dcdd4 \
      --resource-group nl-prod-shared-rg \
      --server-name nl-prod-data-pg \
-     --query "[].name" -o tsv
+     --query "[?startIpAddress=='$OPERATOR_IP'].name" -o tsv
    ```
 
 ---
