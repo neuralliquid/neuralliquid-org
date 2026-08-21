@@ -15,11 +15,11 @@
 
 The current `nl-org-github-actions` service principal has the correct
 `production` and `main` federated subjects, backend access, and DNS access, but
-no access to `nl-prod-web-rg`. Azure has no built-in role limited to Static Web
+no access to `nl-web-rg`. Azure has no built-in role limited to Static Web
 App deployment-token retrieval, so this stack defines a custom role containing
 only `staticSites/read` and `staticSites/listSecrets/action`. Azure stores the
 role definition at resource-group scope, but its assignment is scoped to the
-single site, not its resource group or subscription.
+single site (`neuralliquid-web-prod`), not its resource group or subscription.
 
 The first apply creates the role and assignment, so it must be run by an Owner
 or Role Based Access Control Administrator:

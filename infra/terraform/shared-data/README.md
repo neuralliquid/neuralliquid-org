@@ -1,13 +1,12 @@
 # Shared Data Terraform
 
-This stack owns the shared NeuralLiquid PostgreSQL server — the one piece of
-data infrastructure that no single product can own, because two products sit on
-it.
+This stack owns the shared NeuralLiquid PostgreSQL server in `neuralliquid-sub` —
+the central data infrastructure for NeuralLiquid workloads.
 
 - resource group: `nl-prod-shared-rg`
-- server: `nl-prod-shared-pg` (PostgreSQL 16, `B_Standard_B1ms`, 32 GB, South Africa North)
+- server: `nl-prod-data-pg` (PostgreSQL 16, `B_Standard_B1ms`, 32 GB, South Africa North)
 - vault: `nl-prod-shared-kv` (RBAC-authorized)
-- subscription: `bb4e3882-2079-4bab-8974-611bc0b8bb58`
+- subscription: `5a95ddee-dd63-441a-8306-c8b0803dcdd4` (`neuralliquid-sub`)
 
 ## Ownership Line
 
@@ -18,14 +17,21 @@ Everything **inside** a database — schema, tables, login roles, grants,
 migrations — is owned by the product that uses it. This stack has no PostgreSQL
 provider and holds no database credentials.
 
-| Database | Owning product | Owning role |
-| --- | --- | --- |
-| `houseofveritas` | `house-of-veritas` | `houseofveritas` |
-| `convolens` | `convolens` | `convolens` |
+| Database | Owning product | Owning role | Notes |
+| --- | --- | --- | --- |
+| `convolens` | `convolens` | `convolens` | Primary NeuralLiquid tenant |
+
+> **HOV Exclusion Policy (ADR 0004 & Baton 37547ca3):**
+> House of Veritas (`house-of-veritas`) is strictly excluded from `neuralliquid-sub`'s
+> `nl-prod-data-pg`. Per ADR 0004, HOV is classified as a NexaMesh physical-estate
+> product and will be migrated to an isolated datastore in `nex-prod-hov-rg` under
+> `nexamesh-sub` (`8a5dc70a-bafa-4a04-a281-9b4862a70810`). The source `houseofveritas`
+> database on `mystira-sub` remains untouched until that separately authorized migration.
 
 Adding a database to `tenant_databases` is the org-level act of granting a
 product a home on the shared server. The product then creates its own role and
 schema. See [ADR 0002](../../../docs/adr/0002-shared-data-plane-ownership.md).
+
 
 ### Onboarding a Tenant
 
@@ -46,8 +52,9 @@ Verify by connecting as the new role to another tenant's database and confirming
 
 ## Backend
 
+- subscription: `5a95ddee-dd63-441a-8306-c8b0803dcdd4` (`neuralliquid-sub`)
 - resource group: `nl-org-tfstate-rg`
-- storage account: `nlorgtfstate`
+- storage account: `nlorgtfstatesa`
 - container: `tfstate`
 - key: `shared-data/terraform.tfstate`
 
@@ -112,6 +119,10 @@ The two tags on the server were applied through the resource tags API for
 exactly this reason — a metadata change was not worth sending a production
 credential.
 
+## Database Migration Procedure
+
+For the step-by-step procedure to migrate the `convolens` database from the legacy server to `neuralliquid-sub` (including quiescence, `pg_dump`, SHA256 checksums, role setup, `pg_restore`, and integrity verification), see [Convolens Database Migration Runbook](../../../docs/runbooks/convolens-database-migration.md).
+
 ## Deliberate Non-Goals
 
 - **The Azure-generated firewall rule name is kept as-is.** Renaming it to
@@ -123,3 +134,4 @@ credential.
 - **No private networking.** Access is by the Azure-services firewall allowance.
   Moving to a delegated subnet and private DNS zone is a real improvement and a
   separate decision, because it touches both tenants' connection paths at once.
+

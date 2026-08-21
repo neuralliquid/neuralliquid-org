@@ -82,17 +82,23 @@ resource "azurerm_postgresql_flexible_server_database" "tenant" {
   }
 }
 
-# Permits Azure-hosted callers only — the HOV App Service and the Convolens
-# container app. Developer access requires a temporary rule, added and removed
-# per use. The name is Azure-generated from the portal action that created it;
-# renaming it would destroy and recreate the rule, briefly cutting both
-# applications off, so it is kept as-is.
+# Azure-managed sentinel firewall rule (0.0.0.0/0.0.0.0) imported from live configuration.
+# Permits Azure-hosted callers (the Convolens tenant runtime in neuralliquid-sub).
+# Only the `convolens` tenant database is currently defined on this server.
+#
+# COMPENSATING SECURITY CONTROLS:
+# 1. Tenant Isolation: Default PUBLIC CONNECT is revoked on the database (`REVOKE CONNECT ON DATABASE convolens FROM PUBLIC`),
+#    allowing only the authenticated `convolens` role access.
+# 2. Encryption: Forced TLS 1.2+ (`ssl_min_protocol_version = "TLSv1.2"`) and `require_secure_transport = "ON"`.
+# 3. Authentication: SCRAM-SHA-256 hashed strong credentials stored in Key Vault.
+# 4. Roadmap: Migration to private endpoints / delegated VNet subnet once Container Apps VNet integration is provisioned.
 resource "azurerm_postgresql_flexible_server_firewall_rule" "allow_azure_services" {
   name             = "AllowAllAzureServicesAndResourcesWithinAzureIps_2026-8-7_2-56-48"
   server_id        = azurerm_postgresql_flexible_server.shared.id
   start_ip_address = "0.0.0.0"
   end_ip_address   = "0.0.0.0"
 }
+
 
 # Org-owned credential store for the shared data plane. It holds secrets that
 # belong to the server rather than to any one tenant — today, the server admin

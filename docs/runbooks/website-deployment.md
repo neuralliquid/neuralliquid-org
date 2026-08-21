@@ -6,9 +6,10 @@ The shared website is hosted by the existing Azure Static Web App:
 
 | Setting | Value |
 | --- | --- |
-| Resource group | `nl-prod-web-rg` |
-| Resource | `nl-prod-web-swa` |
-| Azure hostname | `jolly-beach-099205503.7.azurestaticapps.net` |
+| Subscription | `neuralliquid-sub` (`5a95ddee-dd63-441a-8306-c8b0803dcdd4`) |
+| Resource group | `nl-web-rg` |
+| Resource | `neuralliquid-web-prod` |
+| Azure hostname | Azure-assigned default hostname (e.g. `*.azurestaticapps.net`) |
 | Custom domains | `neuralliquid.ai`, `www.neuralliquid.ai` |
 | Source directory | `site/` |
 

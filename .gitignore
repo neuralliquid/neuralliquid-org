@@ -8,3 +8,7 @@ tfplan-*
 node_modules/
 .DS_Store
 Thumbs.db
+.serena/
+.worktrees/
+baserow-ca.yaml
+docuseal-ca.yaml

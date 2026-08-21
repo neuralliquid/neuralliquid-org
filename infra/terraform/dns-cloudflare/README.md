@@ -56,11 +56,10 @@ still open — no record values exist to add).
 ## Backend
 
 Same remote-state storage account the rest of `neuralliquid-org` Terraform
-targets (`nlorgtfstate`, see `infra/terraform/bootstrap/tfstate`), under a
+targets (`nlorgtfstatesa`, see `infra/terraform/bootstrap/tfstate`), under a
 stack-specific key (`dns-cloudflare/terraform.tfstate`) so it doesn't
-collide with `infra/terraform/dns`'s state. That storage account does not
-exist yet — Baton Subtask 2 (`15ef97d6`, "NeuralLiquid Azure Subscription &
-OIDC Federation Setup") provisions it. Until then:
+collide with `infra/terraform/dns`'s state. That storage account is provisioned
+in `neuralliquid-sub` (`5a95ddee-dd63-441a-8306-c8b0803dcdd4`) via Baton Subtask 2 (`15ef97d6`). Before the bootstrap stack is applied:
 
 ```powershell
 terraform -chdir=infra/terraform/dns-cloudflare init -backend=false

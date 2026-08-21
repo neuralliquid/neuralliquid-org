@@ -1,15 +1,8 @@
-# 2026-08-19: all IDs below updated to the new zone built during the org-wide
-# DNS migration (docs/plans/azure-subscription-migration-plan.md, Track B) —
-# subscription 5a95ddee-dd63-441a-8306-c8b0803dcdd4 (neuralliquid-sub),
-# resource group nl-global-shared-rg. Previously these pointed at the legacy
-# zone (bb4e3882-2079-4bab-8974-611bc0b8bb58 / mys-global-shared-rg), which
-# is orphaned but left in place as a rollback path — not deleted.
-#
-# This module's own backend.tf still targets that legacy subscription for
-# remote state, so none of this can actually be applied yet (blocked on the
-# Track B state-backend bootstrap). Records were created directly via `az`
-# CLI; these import blocks let a future `terraform apply` adopt them instead
-# of erroring on duplicates once the backend is unblocked.
+# 2026-08-21: all IDs below target the new zone built in neuralliquid-sub
+# (subscription 5a95ddee-dd63-441a-8306-c8b0803dcdd4, resource group nl-global-shared-rg).
+# Remote state backend targets nlorgtfstate in nl-org-tfstate-rg on neuralliquid-sub.
+# Records were created via `az` CLI; these import blocks let `terraform apply` adopt
+# them cleanly without duplicate creation errors.
 
 import {
   to = azurerm_dns_cname_record.product["convolens"]
