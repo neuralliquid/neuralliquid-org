@@ -8,7 +8,13 @@ status: active
 type: platform
 domain: [defense, iot, ai, simulation, mesh]
 stack: [rust, typescript, solana, tauri]
-description: "AI platform for drone and IoT threat detection (nexamesh.ai). Expanded scope beyond counter-UAS to any AI-connected IoT system."
+description: "Physical-world AI platform for trusted sensing, edge execution, mesh transport, and accountable evidence, with House of Veritas as its first vertical product."
+product_family:
+  name: nexamesh
+  platform: nexamesh-core
+  role: platform
+  vertical_products:
+    - house-of-veritas
 investability:
   completion: 60
   time_to_launch: "2mo"
@@ -32,3 +38,4 @@ roadmap:
 notes:
   - Spun out from phoenixvc/phoenix-rooivalk into dedicated Nexamesh organization.
   - Software-first focus on commodity hardware rather than physical counter-UAS hardware (TRL 1-2).
+  - House of Veritas was accepted as the first NexaMesh vertical on 2026-08-21; its current control plane is live, while NexaMesh sensor and edge integration remains roadmap work.

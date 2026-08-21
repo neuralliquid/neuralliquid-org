@@ -4,6 +4,11 @@
 
 Accepted
 
+**Superseded in part:** [ADR 0004](./0004-hov-nexamesh-product-boundary.md)
+removes House of Veritas from the NeuralLiquid product family. This ADR still
+describes the current compatibility DNS and control-plane boundary until the
+separate HOV migration is complete.
+
 ## Context
 
 NeuralLiquid has four active product repositories:

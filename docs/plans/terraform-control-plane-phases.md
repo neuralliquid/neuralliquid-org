@@ -59,9 +59,14 @@ Exit criteria:
 
 Owner: `house-of-veritas`
 
+> **2026-08-21 amendment:** ADR 0004 reclassifies HOV into the NexaMesh product
+> family. The steps below describe the current compatibility state only. New
+> target infrastructure and eventual DNS ownership follow the separately gated
+> HOV/NexaMesh migration addendum.
+
 - Keep HOV app/runtime infrastructure in the HOV repo.
-- Move only `hov.neuralliquid.ai` DNS records to `neuralliquid-org` once current
-  state ownership is verified.
+- Keep `hov.neuralliquid.ai` DNS records in `neuralliquid-org` as a compatibility
+  boundary until a separately approved hostname cutover.
 - Check for deployment templates or docs that still assume product-owned DNS.
 
 Exit criteria:
