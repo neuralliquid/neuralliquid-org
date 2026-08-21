@@ -237,24 +237,41 @@ EOF
 
 ### Phase 7: Cleanup
 
-1. Remove the session's temporary firewall rule from source and target servers (reconstitutes exact rule name from session file if needed):
+1. Remove the session's temporary firewall rule from source and target servers (reconstitutes exact rule name from session file without guessing):
    ```bash
-   # Reconstitute RULE_NAME from session state file if in a new shell
+   # Reconstitute session state if in a fresh shell session
+   MIGRATION_STATE_DIR="${MIGRATION_STATE_DIR:-$HOME/.neuralliquid/migration_sessions}"
+
    if [ -z "$RULE_NAME" ]; then
      if [ -n "$MIGRATION_STATE_FILE" ] && [ -f "$MIGRATION_STATE_FILE" ]; then
        export RULE_NAME=$(grep '^RULE_NAME=' "$MIGRATION_STATE_FILE" | cut -d'=' -f2)
+     elif [ -n "$MIGRATION_SESSION_ID" ] && [ -f "$MIGRATION_STATE_DIR/convolens_${MIGRATION_SESSION_ID}.state" ]; then
+       export MIGRATION_STATE_FILE="$MIGRATION_STATE_DIR/convolens_${MIGRATION_SESSION_ID}.state"
+       export RULE_NAME=$(grep '^RULE_NAME=' "$MIGRATION_STATE_FILE" | cut -d'=' -f2)
      else
-       # Search in standard state directory for the session file
-       LATEST_STATE=$(ls -t "$HOME/.neuralliquid/migration_sessions"/convolens_*.state 2>/dev/null | head -n 1)
-       if [ -n "$LATEST_STATE" ] && [ -f "$LATEST_STATE" ]; then
-         export MIGRATION_STATE_FILE="$LATEST_STATE"
+       # Check state files in standard directory
+       shopt -s nullglob
+       MATCHING_FILES=("$MIGRATION_STATE_DIR"/convolens_*.state)
+       shopt -u nullglob
+
+       if [ ${#MATCHING_FILES[@]} -eq 1 ]; then
+         export MIGRATION_STATE_FILE="${MATCHING_FILES[0]}"
          export RULE_NAME=$(grep '^RULE_NAME=' "$MIGRATION_STATE_FILE" | cut -d'=' -f2)
+       elif [ ${#MATCHING_FILES[@]} -gt 1 ]; then
+         echo "ERROR: Multiple active migration sessions found in $MIGRATION_STATE_DIR:" >&2
+         for f in "${MATCHING_FILES[@]}"; do
+           echo "  - $f (Rule: $(grep '^RULE_NAME=' "$f" 2>/dev/null | cut -d'=' -f2))" >&2
+         done
+         echo "Please explicitly specify the target session before cleanup:" >&2
+         echo "  export MIGRATION_STATE_FILE=<path> OR export MIGRATION_SESSION_ID=<id>" >&2
+         exit 1
        fi
      fi
    fi
 
    if [ -z "$RULE_NAME" ]; then
-     echo "ERROR: RULE_NAME is not set and no valid migration state file was found." >&2
+     echo "ERROR: RULE_NAME is not set and no active migration state file was found in $MIGRATION_STATE_DIR." >&2
+     echo "Specify: export RULE_NAME=<name> or export MIGRATION_STATE_FILE=<path>" >&2
      exit 1
    fi
 
