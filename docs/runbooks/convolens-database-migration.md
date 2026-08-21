@@ -63,7 +63,7 @@ OPERATOR_IP=$OPERATOR_IP
 CREATED_AT=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
 EOF
      ```
-   - Add operator/runner IP temporarily to source and target servers:
+   - Add operator/runner IP temporarily to source and target servers and register automated error trap:
      ```bash
      # Source server (mystira-sub)
      az postgres flexible-server firewall-rule create \
@@ -82,6 +82,28 @@ EOF
        --rule-name "$RULE_NAME" \
        --start-ip-address "$OPERATOR_IP" \
        --end-ip-address "$OPERATOR_IP"
+
+     # Register automated emergency cleanup trap for unexpected errors or interruptions
+     emergency_firewall_cleanup() {
+       local exit_code=$?
+       if [ $exit_code -ne 0 ]; then
+         echo "=== ERROR TRAP: Migration aborted (Exit Code: $exit_code). Tearing down temporary firewall access... ===" >&2
+         az postgres flexible-server firewall-rule delete \
+           --subscription 5a95ddee-dd63-441a-8306-c8b0803dcdd4 \
+           --resource-group nl-prod-shared-rg \
+           --server-name nl-prod-data-pg \
+           --name "$RULE_NAME" \
+           --yes 2>/dev/null || true
+         az postgres flexible-server firewall-rule delete \
+           --subscription bb4e3882-2079-4bab-8974-611bc0b8bb58 \
+           --resource-group nl-prod-shared-rg \
+           --server-name nl-prod-shared-pg \
+           --name "$RULE_NAME" \
+           --yes 2>/dev/null || true
+         [ -n "$MIGRATION_STATE_FILE" ] && [ -f "$MIGRATION_STATE_FILE" ] && rm -f "$MIGRATION_STATE_FILE"
+       fi
+     }
+     trap emergency_firewall_cleanup ERR INT TERM
      ```
 
 3. **Secrets Retrieval:**
@@ -240,17 +262,31 @@ EOF
 
 1. Remove the session's temporary firewall rule from source and target servers (reconstitutes exact rule name from session file without guessing):
    ```bash
+   # Disable error trap since normal cleanup is executing
+   trap - ERR INT TERM
+
    # Reconstitute session state if in a fresh shell session
    MIGRATION_STATE_DIR="${MIGRATION_STATE_DIR:-$HOME/.neuralliquid/migration_sessions}"
 
    if [ -z "$RULE_NAME" ]; then
-     if [ -n "$MIGRATION_STATE_FILE" ] && [ -f "$MIGRATION_STATE_FILE" ]; then
-       export RULE_NAME=$(grep '^RULE_NAME=' "$MIGRATION_STATE_FILE" | cut -d'=' -f2)
-     elif [ -n "$MIGRATION_SESSION_ID" ] && [ -f "$MIGRATION_STATE_DIR/convolens_${MIGRATION_SESSION_ID}.state" ]; then
-       export MIGRATION_STATE_FILE="$MIGRATION_STATE_DIR/convolens_${MIGRATION_SESSION_ID}.state"
-       export RULE_NAME=$(grep '^RULE_NAME=' "$MIGRATION_STATE_FILE" | cut -d'=' -f2)
+     if [ -n "$MIGRATION_STATE_FILE" ]; then
+       if [ -f "$MIGRATION_STATE_FILE" ]; then
+         export RULE_NAME=$(grep '^RULE_NAME=' "$MIGRATION_STATE_FILE" | cut -d'=' -f2)
+       else
+         echo "ERROR: Explicitly specified MIGRATION_STATE_FILE='$MIGRATION_STATE_FILE' not found." >&2
+         exit 1
+       fi
+     elif [ -n "$MIGRATION_SESSION_ID" ]; then
+       EXPECTED_FILE="$MIGRATION_STATE_DIR/convolens_${MIGRATION_SESSION_ID}.state"
+       if [ -f "$EXPECTED_FILE" ]; then
+         export MIGRATION_STATE_FILE="$EXPECTED_FILE"
+         export RULE_NAME=$(grep '^RULE_NAME=' "$MIGRATION_STATE_FILE" | cut -d'=' -f2)
+       else
+         echo "ERROR: State file for explicit MIGRATION_SESSION_ID='$MIGRATION_SESSION_ID' not found at '$EXPECTED_FILE'." >&2
+         exit 1
+       fi
      else
-       # Check state files in standard directory
+       # Automatic single-file resolution ONLY when no explicit selector was given
        shopt -s nullglob
        MATCHING_FILES=("$MIGRATION_STATE_DIR"/convolens_*.state)
        shopt -u nullglob
@@ -338,3 +374,4 @@ If restore verification fails or application anomalies occur prior to final sign
 2. Revert `nl-prod-convolens-web` configuration to point back to the source database `nl-prod-shared-pg` on `mystira-sub`.
 3. Restart source `nl-prod-convolens-web` on `mystira-sub`.
 4. The source `convolens` and `houseofveritas` databases on `mystira-sub` remain completely intact with zero data loss.
+5. **Immediate Firewall Cleanup:** Execute Phase 7 cleanup commands immediately to ensure no temporary operator access remains open on either server.
