@@ -19,8 +19,8 @@ variable "location" {
 
 variable "server_name" {
   type        = string
-  description = "Shared PostgreSQL Flexible Server name."
-  default     = "nl-prod-shared-pg"
+  description = "Shared PostgreSQL Flexible Server name in neuralliquid-sub."
+  default     = "nl-prod-data-pg"
 }
 
 variable "administrator_login" {

@@ -16,7 +16,7 @@
   - Tenant Role: `convolens`
 - **Destination Environment:**
   - Subscription: `5a95ddee-dd63-441a-8306-c8b0803dcdd4` (`neuralliquid-sub`)
-  - Server: `nl-prod-shared-pg.postgres.database.azure.com` (PostgreSQL 16, South Africa North)
+  - Server: `nl-prod-data-pg.postgres.database.azure.com` (PostgreSQL 16, South Africa North)
   - Database Name: `convolens`
   - Tenant Role: `convolens`
 
@@ -30,9 +30,15 @@
 
 1. **Target Infrastructure Verification:**
    - Terraform stack `infra/terraform/shared-data` applied in `neuralliquid-sub`.
-   - Target server `nl-prod-shared-pg`, resource group `nl-prod-shared-rg`, and database `convolens` exist.
+   - Target server `nl-prod-data-pg`, resource group `nl-prod-shared-rg`, and database `convolens` exist.
    - Key Vault `nl-prod-shared-kv` provisioned with admin credentials stored at `postgres-admin-password`.
+
 2. **Network & Firewall Access:**
+   - Define a static, timestamped rule name for reliable cleanup across calendar days:
+     ```bash
+     export RULE_NAME="MigrationTempRunner_$(date +%Y%m%d_%H%M%S)"
+     export OPERATOR_IP=$(curl -s https://api.ipify.org)
+     ```
    - Add operator/runner IP temporarily to source and target servers:
      ```bash
      # Source server (mystira-sub)
@@ -40,20 +46,29 @@
        --subscription bb4e3882-2079-4bab-8974-611bc0b8bb58 \
        --resource-group nl-prod-shared-rg \
        --server-name nl-prod-shared-pg \
-       --rule-name "MigrationTempRunner_$(date +%Y%m%d)" \
-       --start-ip-address <OPERATOR_IP> \
-       --end-ip-address <OPERATOR_IP>
+       --rule-name "$RULE_NAME" \
+       --start-ip-address "$OPERATOR_IP" \
+       --end-ip-address "$OPERATOR_IP"
 
      # Target server (neuralliquid-sub)
      az postgres flexible-server firewall-rule create \
        --subscription 5a95ddee-dd63-441a-8306-c8b0803dcdd4 \
        --resource-group nl-prod-shared-rg \
-       --server-name nl-prod-shared-pg \
-       --rule-name "MigrationTempRunner_$(date +%Y%m%d)" \
-       --start-ip-address <OPERATOR_IP> \
-       --end-ip-address <OPERATOR_IP>
+       --server-name nl-prod-data-pg \
+       --rule-name "$RULE_NAME" \
+       --start-ip-address "$OPERATOR_IP" \
+       --end-ip-address "$OPERATOR_IP"
      ```
+
 3. **Secrets Retrieval:**
+   - Retrieve source admin password:
+     ```bash
+     SOURCE_PG_ADMIN_PW=$(az keyvault secret show \
+       --subscription bb4e3882-2079-4bab-8974-611bc0b8bb58 \
+       --vault-name nl-prod-shared-kv \
+       --name postgres-admin-password \
+       --query value -o tsv)
+     ```
    - Retrieve target admin password:
      ```bash
      TARGET_PG_ADMIN_PW=$(az keyvault secret show \
@@ -70,6 +85,7 @@
        --name convolens-db-password \
        --query value -o tsv)
      ```
+
 4. **Client Tooling:**
    - PostgreSQL client utilities (`pg_dump`, `pg_restore`, `psql`) version 16.x installed.
 
@@ -94,7 +110,7 @@
    ```
 
 ### Phase 2: Database Backup / Export (`pg_dump`)
-1. Run `pg_dump` targeting ONLY the `convolens` database:
+1. Run `pg_dump` targeting ONLY the `convolens` database on source server `nl-prod-shared-pg`:
    ```bash
    PGPASSWORD="$SOURCE_PG_ADMIN_PW" pg_dump \
      -h nl-prod-shared-pg.postgres.database.azure.com \
@@ -113,8 +129,9 @@
 3. Retain backup archive in secure storage / blob container as a rollback baseline.
 
 ### Phase 3: Target Role and Database Setup
-1. Connect as `nlsharedadmin` to target server `nl-prod-shared-pg` in `neuralliquid-sub`:
+1. Connect as `nlsharedadmin` to target server `nl-prod-data-pg` in `neuralliquid-sub`:
    ```sql
+   -- Connect: psql -h nl-prod-data-pg.postgres.database.azure.com -U nlsharedadmin -d postgres
    -- Create product tenant login role
    CREATE ROLE convolens WITH LOGIN PASSWORD '<CONVOLENS_ROLE_PW>';
 
@@ -135,10 +152,10 @@
    ```
 
 ### Phase 4: Database Restore (`pg_restore`)
-1. Restore schema and data into target `convolens` database:
+1. Restore schema and data into target `convolens` database on destination server `nl-prod-data-pg`:
    ```bash
    PGPASSWORD="$TARGET_PG_ADMIN_PW" pg_restore \
-     -h nl-prod-shared-pg.postgres.database.azure.com \
+     -h nl-prod-data-pg.postgres.database.azure.com \
      -U nlsharedadmin \
      -d convolens \
      --no-owner \
@@ -164,7 +181,7 @@
 3. Test read/write functionality with the tenant role `convolens`:
    ```bash
    PGPASSWORD="$CONVOLENS_ROLE_PW" psql \
-     -h nl-prod-shared-pg.postgres.database.azure.com \
+     -h nl-prod-data-pg.postgres.database.azure.com \
      -U convolens \
      -d convolens \
      -c "SELECT current_user, current_database();"
@@ -179,7 +196,7 @@
      --subscription 5a95ddee-dd63-441a-8306-c8b0803dcdd4 \
      --vault-name nl-prod-convolens-kv \
      --name "database-url" \
-     --value "postgresql://convolens:<PASSWORD>@nl-prod-shared-pg.postgres.database.azure.com:5432/convolens?sslmode=require"
+     --value "postgresql://convolens:<PASSWORD>@nl-prod-data-pg.postgres.database.azure.com:5432/convolens?sslmode=require"
    ```
 2. Start Convolens runtime in `neuralliquid-sub` (Subtask 5).
 3. Validate application health endpoint:
@@ -188,21 +205,29 @@
    ```
 
 ### Phase 7: Cleanup
-1. Remove temporary operator firewall rules from source and target servers:
+1. Remove temporary operator firewall rules from source and target servers using the static `$RULE_NAME`:
    ```bash
    az postgres flexible-server firewall-rule delete \
      --subscription 5a95ddee-dd63-441a-8306-c8b0803dcdd4 \
      --resource-group nl-prod-shared-rg \
-     --server-name nl-prod-shared-pg \
-     --name "MigrationTempRunner_$(date +%Y%m%d)" \
+     --server-name nl-prod-data-pg \
+     --name "$RULE_NAME" \
      --yes
 
    az postgres flexible-server firewall-rule delete \
      --subscription bb4e3882-2079-4bab-8974-611bc0b8bb58 \
      --resource-group nl-prod-shared-rg \
      --server-name nl-prod-shared-pg \
-     --name "MigrationTempRunner_$(date +%Y%m%d)" \
+     --name "$RULE_NAME" \
      --yes
+   ```
+2. Verify rule removal:
+   ```bash
+   az postgres flexible-server firewall-rule list \
+     --subscription 5a95ddee-dd63-441a-8306-c8b0803dcdd4 \
+     --resource-group nl-prod-shared-rg \
+     --server-name nl-prod-data-pg \
+     --query "[].name" -o tsv
    ```
 
 ---
@@ -211,6 +236,6 @@
 
 If restore verification fails or application anomalies occur prior to final signoff:
 1. Stop the target Convolens workload.
-2. Revert `nl-prod-convolens-web` configuration to point back to the source database on `mystira-sub`.
+2. Revert `nl-prod-convolens-web` configuration to point back to the source database `nl-prod-shared-pg` on `mystira-sub`.
 3. Restart source `nl-prod-convolens-web` on `mystira-sub`.
 4. The source `convolens` and `houseofveritas` databases on `mystira-sub` remain completely intact with zero data loss.

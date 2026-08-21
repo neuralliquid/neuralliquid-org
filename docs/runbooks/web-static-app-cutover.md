@@ -68,11 +68,32 @@ Before routing live domain traffic, the target Static Web App must be seeded wit
 
 ---
 
-### Phase 2: Custom Domain Binding & SSL Certificate Validation
+### Phase 2: Custom Domain Unbinding & Target Registration
 
-Static Web App custom domains require verification tokens to be validated prior to TLS certificate issuance.
+> [!IMPORTANT]
+> **Domain Exclusivity Requirement:**
+> Azure Static Web Apps strictly rejects adding custom domains that are currently bound to another SWA resource. You must explicitly unbind `neuralliquid.ai` and `www.neuralliquid.ai` from the legacy `nl-prod-web-swa` on `mystira-sub` immediately before registering them on `neuralliquid-web-prod`.
 
-1. **Initiate Custom Domain Registration on Target SWA:**
+1. **Unbind Custom Domains from Legacy SWA (mystira-sub):**
+   ```powershell
+   # Unbind www subdomain from legacy SWA
+   az staticwebapp hostname delete \
+     --name nl-prod-web-swa \
+     --resource-group nl-prod-web-rg \
+     --subscription bb4e3882-2079-4bab-8974-611bc0b8bb58 \
+     --hostname www.neuralliquid.ai \
+     --yes
+
+   # Unbind apex domain from legacy SWA
+   az staticwebapp hostname delete \
+     --name nl-prod-web-swa \
+     --resource-group nl-prod-web-rg \
+     --subscription bb4e3882-2079-4bab-8974-611bc0b8bb58 \
+     --hostname neuralliquid.ai \
+     --yes
+   ```
+
+2. **Register Custom Domains on Target SWA (neuralliquid-sub):**
    ```powershell
    # Apex domain registration
    az staticwebapp hostname set \
@@ -91,7 +112,7 @@ Static Web App custom domains require verification tokens to be validated prior 
      --validation-method cname-delegation
    ```
 
-2. **Retrieve Validation Token:**
+3. **Retrieve Validation Token:**
    ```powershell
    az staticwebapp hostname show \
      --name neuralliquid-web-prod \
@@ -101,7 +122,7 @@ Static Web App custom domains require verification tokens to be validated prior 
      --query validationToken -o tsv
    ```
 
-3. **Update Authoritative Cloudflare DNS Records:**
+4. **Update Authoritative Cloudflare DNS Records:**
    In `infra/terraform/dns-cloudflare` (or Cloudflare Dashboard):
    - **Apex TXT Record (`@`):** Update the `swa_domain_verification` value with the newly retrieved `validationToken`.
    - **WWW CNAME Record (`www`):** Update `content` to point to `<neuralliquid-web-prod-defaultHostname>.azurestaticapps.net`.
