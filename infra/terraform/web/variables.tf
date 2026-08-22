@@ -25,5 +25,5 @@ variable "location" {
 variable "github_oidc_principal_object_id" {
   type        = string
   description = "Object ID of the existing nl-org-github-actions service principal."
-  default     = "369def47-8d91-4710-8c37-e521bc4a360a"
+  default     = "c3f72eeb-8deb-4082-a8e9-7b1d766033bb"
 }

@@ -161,8 +161,9 @@ resource "azurerm_dns_txt_record" "apex" {
 
   # Static Web App apex custom-domain ownership token (dns-txt-token
   # validation, see infra/terraform/web/main.tf azurerm_static_web_app_custom_domain.apex).
+  # 2026-08-21: updated for neuralliquid-web-prod on neuralliquid-sub.
   record {
-    value = "_t8jaqjnoysen3xbm27vutpyb5jp6vl7"
+    value = "_1qttf197b2q97b4za18sylxn8amz1a6"
   }
   # SPF for Mailgun.
   record {
@@ -179,9 +180,10 @@ resource "azurerm_dns_cname_record" "www" {
   zone_name           = data.azurerm_dns_zone.neuralliquid.name
   resource_group_name = var.dns_zone_resource_group
   ttl                 = 3600
-  # nl-prod-web-swa's default hostname (infra/terraform/web) — cname-delegation
+  # neuralliquid-web-prod's default hostname (infra/terraform/web) — cname-delegation
   # validated custom domain, same Static Web App the apex A record serves.
-  record = "jolly-beach-099205503.7.azurestaticapps.net"
+  # 2026-08-21: updated for neuralliquid-web-prod on neuralliquid-sub.
+  record = "black-plant-0aaf54b0f.7.azurestaticapps.net"
 }
 
 resource "azurerm_dns_cname_record" "email" {

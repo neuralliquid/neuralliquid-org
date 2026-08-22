@@ -120,7 +120,8 @@ locals {
       # Static Web App apex custom-domain ownership token (dns-txt-token
       # validation, see infra/terraform/web/main.tf
       # azurerm_static_web_app_custom_domain.apex).
-      value = "_t8jaqjnoysen3xbm27vutpyb5jp6vl7"
+      # 2026-08-21: updated for neuralliquid-web-prod on neuralliquid-sub.
+      value = "_ub7jlhdju43c8axizuupylc00sg57mi"
     }
     mailgun_spf = {
       value = "v=spf1 include:mailgun.org ~all"
@@ -193,9 +194,10 @@ resource "cloudflare_dns_record" "www" {
   zone_id = local.zone_id
   name    = "www"
   type    = "CNAME"
-  # nl-prod-web-swa's default hostname (infra/terraform/web) — cname-delegation
+  # neuralliquid-web-prod's default hostname (infra/terraform/web) — cname-delegation
   # validated custom domain, same Static Web App the apex A record serves.
-  content = "jolly-beach-099205503.7.azurestaticapps.net"
+  # 2026-08-21: updated for neuralliquid-web-prod on neuralliquid-sub.
+  content = "black-plant-0aaf54b0f.7.azurestaticapps.net"
   ttl     = 3600
   proxied = false
 }
