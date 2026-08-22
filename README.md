@@ -31,14 +31,23 @@ canonical project registry are maintained in [`org-meta`](../org-meta/README.md)
 
 Stabilize `neuralliquid.ai` DNS ownership and remove product subdomain drift.
 
-Known live state on 2026-07-17:
+**DNS zone migration to Cloudflare complete (2026-08-19).** The `neuralliquid.ai`
+zone is now delegated to Cloudflare (`jack.ns.cloudflare.com` /
+`laylah.ns.cloudflare.com`), leaving the prior Azure DNS zones orphaned as
+rollback references. See [`docs/inventory/dns.md`](docs/inventory/dns.md) for
+the full execution log and [`infra/terraform/dns-cloudflare/README.md`](infra/terraform/dns-cloudflare/README.md).
+
+Known live state as of 2026-08-21:
 
 | Host | Current target | Status |
 | --- | --- | --- |
-| `convolens.neuralliquid.ai` | `nl-prod-convolens-web.azurewebsites.net` | Healthy |
-| `omnipost.neuralliquid.ai` | `neuralliquid.ai` | Broken: Azure default 404 |
+| `convolens.neuralliquid.ai` | `nl-prod-convolens-web-nl.azurewebsites.net` | Healthy — corrected 2026-08-21 |
+| `omnipost.neuralliquid.ai` | `nl-dev-omnipost-web.azurewebsites.net` | Healthy — corrected 2026-08-19 |
 | `cognitive-mesh.neuralliquid.ai` | `cognitive-mesh-frontend-prod.azurewebsites.net` | Healthy |
 | `hov.neuralliquid.ai` | `nl-prod-hov-app.azurewebsites.net` | Healthy |
+| `www.neuralliquid.ai` | `black-plant-0aaf54b0f.7.azurestaticapps.net` | Healthy — pointed at `neuralliquid-web-prod` SWA on `neuralliquid-sub` |
+
+Both `neuralliquid.ai` (apex) and `www.neuralliquid.ai` now resolve with valid TLS.
 
 ## Repo Boundary
 
@@ -75,6 +84,7 @@ infra/
     bootstrap/
       tfstate/
     dns/
+    dns-cloudflare/
     github/
     azure/
     shared-data/
@@ -102,3 +112,24 @@ products/
 3. Move Omnipost away from `CNAME -> neuralliquid.ai` once the target app exists.
 4. Reconcile Convolens and HOV manual DNS/custom-domain drift into durable product IaC.
 5. Decide whether Cognitive Mesh DNS moves here immediately or remains a documented temporary exception.
+
+**Status:**
+
+- [x] **Milestone 1** — `infra/terraform/bootstrap/tfstate` exists and is the
+  shared backend for every stack in this repo.
+- [x] **Milestone 3** — Omnipost CNAME corrected from the bare apex to
+  `nl-dev-omnipost-web.azurewebsites.net` (verified 2026-08-19).
+- [x] **DNS zone migration** — zone delegated to Cloudflare 2026-08-19; Azure
+  DNS zones orphaned as rollback references (`docs/inventory/dns.md`).
+- [~] **Milestone 2** — `infra/terraform/dns-cloudflare` (the intended live
+  IaC owner) is written and `terraform validate`-clean in CI, but records are
+  still imported from the live zone only via out-of-band
+  `scripts/generate-imports.sh`; `imports.tf` not yet generated. The Azure
+  `infra/terraform/dns` stack remains as the rollback-reference counterpart.
+- [~] **Milestone 4** — Convolens CNAME corrected to `...-nl.azurewebsites.net`
+  across `docs/inventory/dns.md`, `infra/terraform/dns*`, and
+  `products/convolens.yaml` (verified 2026-08-21), but the product repo still
+  needs to reconcile hostname binding/certificate drift into its own IaC.
+- [ ] **Milestone 5** — Cognitive Mesh DNS ownership decision pending; its
+  records still live in its own Terraform stack (documented temporary
+  exception).
