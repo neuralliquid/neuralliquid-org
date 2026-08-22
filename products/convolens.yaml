@@ -4,8 +4,8 @@ owner: neuralliquid
 repo: https://github.com/neuralliquid/convolens
 brand: convolens.neuralliquid.ai
 canonical_host: convolens.neuralliquid.ai
-current_dns_target: nl-prod-convolens-web.azurewebsites.net
-desired_dns_target: nl-prod-convolens-web.azurewebsites.net
+current_dns_target: nl-prod-convolens-web-nl.azurewebsites.net
+desired_dns_target: nl-prod-convolens-web-nl.azurewebsites.net
 status: active
 type: platform
 domain: [ai, messaging, analytics, enterprise]
@@ -32,6 +32,6 @@ roadmap:
     - External SaaS pricing page and reference customer onboarding (twinesandstraps).
     - Secret rotation migration to Key Vault role assignments.
 notes:
-  - DNS now CNAMEs to nl-prod-convolens-web.azurewebsites.net.
+  - DNS now CNAMEs to nl-prod-convolens-web-nl.azurewebsites.net (confirmed via nslookup 2026-08-21; corrected from the no-suffix form previously declared here).
   - Hostname binding and SNI managed certificate applied on 2026-07-17.
   - App Service plan upgraded to B1 for managed certificate support.

@@ -29,6 +29,44 @@ drifting between what's declared and what's live (see the comment on
 `cloudflare_dns_record.product["hov_login"]` in `main.tf`) — check it
 first if the count comes up short.
 
+**Status update, 2026-08-21: convolens target hostname dispute resolved —
+live has the `-nl` suffix.** The prior note here recorded a reconciliation
+pass, prompted by a separate DNS-cutover task brief, that asserted the live
+`convolens` CNAME target is `nl-prod-convolens-web-nl.azurewebsites.net`
+but could not verify it live (a `CLOUDFLARE_API_TOKEN` was present in the
+executing agent's environment, but the agent's sandbox blocked outbound use
+of it — a detected-credential guard tripped before any request left the
+process). A direct `nslookup -type=CNAME convolens.neuralliquid.ai`, run
+by hand outside that sandbox on 2026-08-21, returned
+`nl-prod-convolens-web-nl.azurewebsites.net` — confirming the `-nl` suffix.
+This file's `product_cnames.convolens.record` above, plus
+`infra/terraform/dns/main.tf`, `docs/inventory/dns.md`, and
+`products/convolens.yaml`, all previously declared the no-suffix form
+(`nl-prod-convolens-web.azurewebsites.net`); all four have been corrected
+in this pass to match the confirmed live value. Same pattern as
+`login.hov`'s 2026-08-19 correction: live was correct, the declarations
+were wrong. `terraform validate` against this stack's HCL (provider
+`cloudflare/cloudflare` v5.23.0) passed both before and after the string
+change — this was always a data question, not a syntax one.
+
+The `CLOUDFLARE_API_TOKEN` sandbox block above is still unresolved as a
+tooling gap: `scripts/generate-imports.sh` has still not been run against
+the live zone (see "Import" below), so `imports.tf` still does not exist.
+Note for whoever next runs it with a working token: `match_address` keys
+CNAMEs on name+type only, not content, so a run against the *old*
+no-suffix declaration would still have reported a "match" for `convolens`
+against the live (now-corrected) record — read the raw `content` value the
+script matched against directly before trusting a green "22 matched"
+count, don't rely on the match itself as confirmation.
+
+Also updated 2026-08-21: this stack is now referenced by
+`.github/workflows/terraform-validate.yml` (init `-backend=false` +
+`validate`, alongside bootstrap/tfstate, dns, web, and shared-data) — it no
+longer sits outside CI. `.github/workflows/terraform-dns.yml` still covers
+only the Azure `infra/terraform/dns` stack, and no workflow holds a
+Cloudflare credential yet — `validate` doesn't need one, only `plan`/
+`apply` will, and wiring that secret in remains a separate follow-up.
+
 ## Current Scope
 
 Same 7 product hosts, 7 `asuid.*` validation records, and apex/`www`/`email`

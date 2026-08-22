@@ -55,3 +55,9 @@ jobs:
 
       - name: Validate shared data
         run: terraform -chdir=infra/terraform/shared-data validate
+
+      - name: Init DNS Cloudflare without backend
+        run: terraform -chdir=infra/terraform/dns-cloudflare init -backend=false
+
+      - name: Validate DNS Cloudflare
+        run: terraform -chdir=infra/terraform/dns-cloudflare validate
