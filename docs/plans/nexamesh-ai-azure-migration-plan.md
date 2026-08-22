@@ -538,7 +538,7 @@ decision to split the two services onto separate hostnames.
     `Healthy`/`RunningAtMaxScale` throughout the crash loop — that's
     container/probe level only, not proof the app is serving requests.
     **Fix applied by the domain owner:**
-    ```
+    ```bash
     az containerapp update -n nex-prod-baserow-ca -g nex-prod-services-rg --cpu 1.0 --memory 2Gi
     ```
     New revision `nex-prod-baserow-ca--0000002` came up on 1.0 CPU / 2Gi
