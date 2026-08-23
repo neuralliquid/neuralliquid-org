@@ -55,7 +55,7 @@ variable "administrator_password_wo_version" {
 variable "key_vault_name" {
   type        = string
   description = "Org-owned vault for shared data plane credentials."
-  default     = "nl-prod-shared-kv"
+  default     = "nl-prod-data-kv"
 }
 
 variable "key_vault_role_assignments" {
@@ -75,7 +75,7 @@ variable "key_vault_role_assignments" {
   default = {
     operator_jurie = {
       role         = "Key Vault Secrets Officer"
-      principal_id = "99b63adb-8f1a-4d7a-a98c-5bfe9c7fcd96"
+      principal_id = "3d499301-0d84-4637-ab87-3c5e1082dcbc"
     }
   }
 }
