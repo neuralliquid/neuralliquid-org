@@ -98,6 +98,11 @@ locals {
       ttl   = 300
       value = var.mystira_identity_app_service_verification_id
     }
+    github_enterprise_celladore = {
+      name  = "_gh-celladoresystems-e"
+      ttl   = 300
+      value = "4bd016250d"
+    }
   }
 
   # Cloudflare's flat record model needs one MX row per exchange, unlike

@@ -23,6 +23,12 @@ resource "azurerm_resource_group" "shared" {
   tags = local.tags
 }
 
+resource "random_password" "postgres_admin" {
+  length           = 32
+  special          = true
+  override_special = "!#$%&*()-_=+[]{}<>:?"
+}
+
 resource "azurerm_postgresql_flexible_server" "shared" {
   name                = var.server_name
   resource_group_name = azurerm_resource_group.shared.name
@@ -30,17 +36,9 @@ resource "azurerm_postgresql_flexible_server" "shared" {
   version             = "16"
   zone                = "2"
 
-  administrator_login = var.administrator_login
-
-  # No password attribute is declared here, deliberately. azurerm requires
-  # administrator_password_wo and administrator_password_wo_version to be set as
-  # a pair, and declaring the pair — even wired to null variables — makes the
-  # provider mark the server as needing an update on every plan. Leaving both out
-  # is what keeps a routine plan clean.
-  #
-  # The cost is real and is documented in the README: azurerm will not update
-  # this server at all without the credential, so any genuine change to it must
-  # add the pair back and supply the password from Key Vault for that run.
+  administrator_login               = var.administrator_login
+  administrator_password_wo         = coalesce(var.administrator_password, random_password.postgres_admin.result)
+  administrator_password_wo_version = 1
 
   # Burstable tier, Standard_B1ms. The provider prefixes the tier: B / GP / MO.
   sku_name          = "B_Standard_B1ms"
@@ -132,6 +130,16 @@ resource "azurerm_role_assignment" "key_vault" {
   scope                = azurerm_key_vault.shared.id
   role_definition_name = each.value.role
   principal_id         = each.value.principal_id
+}
+
+resource "azurerm_key_vault_secret" "postgres_admin" {
+  name         = "postgres-admin-password"
+  value        = coalesce(var.administrator_password, random_password.postgres_admin.result)
+  key_vault_id = azurerm_key_vault.shared.id
+
+  depends_on = [
+    azurerm_role_assignment.key_vault
+  ]
 }
 
 # Both of these currently match the Azure system default. They are declared so
