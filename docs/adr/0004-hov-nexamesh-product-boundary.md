@@ -90,10 +90,20 @@ NexaMesh device or edge agent.
 - HOV must leave the NeuralLiquid shared PostgreSQL server for an isolated,
   independently restorable datastore in `nex-prod-hov-rg`. Cutover requires a
   successful independent backup/restore rehearsal and explicit acceptance of
-  the restored data boundary.
-- Existing `sign.nexamesh.ai` and `ops.nexamesh.ai` services require explicit
-  ownership decisions: shared NexaMesh services with contracts, or HOV-owned
-  services moved into the HOV product boundary.
+  the restored data boundary. **Deprioritized 2026-08-26:** HOV is not yet in
+  active/live use, so that rehearsal is not being scheduled at this time.
+  Revisit when that changes — see `nexamesh-org` ADR 0002's open items.
+- **`sign.nexamesh.ai` and `ops.nexamesh.ai` ownership — resolved 2026-08-26.**
+  `nexamesh-org` ADR 0002 records the decision on the receiving side: **shared
+  NexaMesh service**, owned by the `nexamesh-org` control plane, not moved
+  into the HOV product boundary. Both are confirmed (not inferred) as
+  `nex-prod-docuseal-ca` and `nex-prod-baserow-ca` in `nex-prod-services-rg`
+  (`nexamesh-sub`), each with its own managed certificate on the shared
+  `nex-prod-services-cae` Container Apps environment. Neither is under any
+  Terraform state yet — adopting them is a follow-up in `nexamesh-org`, not
+  this repo. The tenant isolation, availability, data retention, and API
+  contracts a shared service implies (per the migration addendum's Phase 4
+  gate) remain open and are not resolved by this decision alone.
 - `hov.neuralliquid.ai` remains a compatibility hostname until a separate DNS,
   identity-callback, certificate, and user-communication cutover is approved.
 
