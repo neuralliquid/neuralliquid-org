@@ -104,14 +104,20 @@ target without changing public DNS.
 
 ### Phase 4: Reconcile NexaMesh services
 
-- Decide whether `sign.nexamesh.ai` and `ops.nexamesh.ai` are shared NexaMesh
-  services or HOV-owned services.
-- If shared, define tenant isolation, availability, data retention, and API
-  contracts. If HOV-owned, move their resources and data into the HOV boundary.
+- ~~Decide whether `sign.nexamesh.ai` and `ops.nexamesh.ai` are shared
+  NexaMesh services or HOV-owned services.~~ **Decided 2026-08-26: shared
+  NexaMesh service**, owned by the `nexamesh-org` control plane — see
+  `nexamesh-org` ADR 0002 and this org's ADR 0004. Not yet backed by
+  Terraform on the `nexamesh-org` side.
+- Still open: define tenant isolation, availability, data retention, and API
+  contracts for that shared service. This was not resolved by the ownership
+  decision above and remains blocking for this phase's gate.
 - Do not claim sensor, device-twin, mesh, or edge-agent capability until a real
   implementation and acceptance evidence exist.
 
-**Gate:** documented service ownership and tested failure/isolation behavior.
+**Gate:** documented service ownership (done) and tested failure/isolation
+behavior (still open — tenant isolation/availability/data retention/API
+contracts above).
 
 ### Phase 5: DNS and identity-compatible cutover
 
