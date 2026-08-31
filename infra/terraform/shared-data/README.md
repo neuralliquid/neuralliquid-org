@@ -20,6 +20,7 @@ provider and holds no database credentials.
 | Database | Owning product | Owning role | Notes |
 | --- | --- | --- | --- |
 | `convolens` | `convolens` | `convolens` | Primary NeuralLiquid tenant |
+| `tarmac` | `tarmac` | `tarmac` | Quotes/invoices document service (`packages/launchpad`). Database declared; onboarding steps 2–4 below pending. |
 
 > **HOV Exclusion Policy (ADR 0004 & Baton 37547ca3):**
 > House of Veritas (`house-of-veritas`) is strictly excluded from `neuralliquid-sub`'s
