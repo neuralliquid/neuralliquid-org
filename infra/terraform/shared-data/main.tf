@@ -81,12 +81,17 @@ resource "azurerm_postgresql_flexible_server_database" "tenant" {
 }
 
 # Azure-managed sentinel firewall rule (0.0.0.0/0.0.0.0) imported from live configuration.
-# Permits Azure-hosted callers (the Convolens tenant runtime in neuralliquid-sub).
-# Only the `convolens` tenant database is currently defined on this server.
+# Permits Azure-hosted callers — currently the Convolens tenant runtime in neuralliquid-sub;
+# Tarmac's runtime will reach the server the same way once its own onboarding lands.
+# The `convolens` and `tarmac` tenant databases are declared on this server; `tarmac`'s
+# database exists once this stack applies, but its role/schema/PUBLIC-CONNECT-revoke are
+# still pending (see the shared-data README's "Onboarding a Tenant" steps 2–4).
 #
 # COMPENSATING SECURITY CONTROLS:
-# 1. Tenant Isolation: Default PUBLIC CONNECT is revoked on the database (`REVOKE CONNECT ON DATABASE convolens FROM PUBLIC`),
-#    allowing only the authenticated `convolens` role access.
+# 1. Tenant Isolation: Default PUBLIC CONNECT is revoked on each tenant database as part of
+#    tenant onboarding (`convolens` revoked 2026-08-07 via `REVOKE CONNECT ON DATABASE convolens
+#    FROM PUBLIC`; `tarmac` pending onboarding step 3), allowing only each tenant's own
+#    authenticated role access once revoked.
 # 2. Encryption: Forced TLS 1.2+ (`ssl_min_protocol_version = "TLSv1.2"`) and `require_secure_transport = "ON"`.
 # 3. Authentication: SCRAM-SHA-256 hashed strong credentials stored in Key Vault.
 # 4. Roadmap: Migration to private endpoints / delegated VNet subnet once Container Apps VNet integration is provisioned.
