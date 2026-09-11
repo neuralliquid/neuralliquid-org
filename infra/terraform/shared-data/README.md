@@ -61,11 +61,11 @@ Verify by connecting as the new role to another tenant's database and confirming
 
 ## Import
 
-The PostgreSQL resources already existed — they were created with `az` during the
-2026-08-06 consolidation and were drift until adopted. `imports.tf` records that
-adoption; it ran on 2026-08-07 and reads *7 to import, 1 to change*. The import
-blocks are kept rather than deleted, because they document how these resources
-entered state and are harmless once satisfied.
+The PostgreSQL resources were adopted during the 2026-08-06 consolidation. That
+history remains relevant, but this is now a greenfield `neuralliquid-sub` stack:
+`imports.tf` deliberately contains no active import blocks. Do not re-enable
+imports unless adopting an existing resource into this state is an explicit,
+reviewed operation.
 
 The vault and its role assignment were created by this stack, not imported.
 
@@ -94,27 +94,18 @@ convolens' tenant role password stays in `nl-prod-convolens-kv`.
 
 There is a sharp edge worth knowing before you try.
 
-azurerm will not update `azurerm_postgresql_flexible_server` at all while
-`authentication.password_auth_enabled` is true unless the config supplies
-`administrator_password` — or the `administrator_password_wo` /
-`administrator_password_wo_version` pair. `ignore_changes` does not satisfy it;
-the check runs on the update request, not on the diff. Declaring the write-only
-pair wired to null variables does not work either: the provider then marks the
-server as needing an update on *every* plan, and that update cannot apply.
+The server is configured with Terraform 1.11's write-only
+`administrator_password_wo` pair. When no `TF_VAR_administrator_password`
+override is supplied, Terraform generates a complexity-compliant administrator
+password and writes the same value to `nl-prod-data-kv/postgres-admin-password`.
+Routine plans therefore need no operator-supplied credential.
 
-So the config declares no password attribute at all, which is what keeps a
-routine plan clean. To make a genuine change to the server — SKU, storage,
-backup retention — for that run only:
-
-1. add `administrator_password_wo` and `administrator_password_wo_version = 1`
-   to the resource;
-2. supply the password from `nl-prod-data-kv/postgres-admin-password` via
-   `TF_VAR_administrator_password`, never in a file;
-3. apply, then remove the pair again.
-
-Because it is write-only, the credential is not written to state. Be aware that
-this run also *sets* the admin password to the supplied value, so the vault must
-hold the current one.
+The PostgreSQL provider does not expose the write-only password on the server
+resource. The generated password and Key Vault secret are Terraform-sensitive
+values, so state and Key Vault access remain privileged. Any administrator
+password rotation must use the separately approved rotation runbook and update
+the database and vault together; do not add and remove password arguments as an
+ad hoc server-change workaround.
 
 The two tags on the server were applied through the resource tags API for
 exactly this reason — a metadata change was not worth sending a production
