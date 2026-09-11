@@ -40,8 +40,8 @@ resource "azurerm_postgresql_flexible_server" "shared" {
   version             = "16"
   zone                = "2"
 
-  administrator_login               = var.administrator_login
-  administrator_password_wo         = coalesce(var.administrator_password, random_password.postgres_admin.result)
+  administrator_login       = var.administrator_login
+  administrator_password_wo = coalesce(var.administrator_password, random_password.postgres_admin.result)
   # Bump with any intentional administrator-password rotation. This change
   # accompanies the strengthened generated-password constraints above, which
   # replace the random value for an existing state.
