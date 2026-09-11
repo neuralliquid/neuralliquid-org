@@ -42,7 +42,10 @@ resource "azurerm_postgresql_flexible_server" "shared" {
 
   administrator_login               = var.administrator_login
   administrator_password_wo         = coalesce(var.administrator_password, random_password.postgres_admin.result)
-  administrator_password_wo_version = 1
+  # Bump with any intentional administrator-password rotation. This change
+  # accompanies the strengthened generated-password constraints above, which
+  # replace the random value for an existing state.
+  administrator_password_wo_version = 2
 
   # Burstable tier, Standard_B1ms. The provider prefixes the tier: B / GP / MO.
   sku_name          = "B_Standard_B1ms"
