@@ -5,7 +5,7 @@ the central data infrastructure for NeuralLiquid workloads.
 
 - resource group: `nl-prod-shared-rg`
 - server: `nl-prod-data-pg` (PostgreSQL 16, `B_Standard_B1ms`, 32 GB, South Africa North)
-- vault: `nl-prod-shared-kv` (RBAC-authorized)
+- vault: `nl-prod-data-kv` (RBAC-authorized)
 - subscription: `5a95ddee-dd63-441a-8306-c8b0803dcdd4` (`neuralliquid-sub`)
 
 ## Ownership Line
@@ -79,7 +79,7 @@ reading carefully.
 
 ## Secrets
 
-Routine plans need no credential. `nl-prod-shared-kv/postgres-admin-password`
+Routine plans need no credential. `nl-prod-data-kv/postgres-admin-password`
 holds the server admin password; nothing in this stack reads it, and no
 application connects as that role.
 
@@ -108,7 +108,7 @@ backup retention — for that run only:
 
 1. add `administrator_password_wo` and `administrator_password_wo_version = 1`
    to the resource;
-2. supply the password from `nl-prod-shared-kv/postgres-admin-password` via
+2. supply the password from `nl-prod-data-kv/postgres-admin-password` via
    `TF_VAR_administrator_password`, never in a file;
 3. apply, then remove the pair again.
 

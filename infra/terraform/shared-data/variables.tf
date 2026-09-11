@@ -32,7 +32,7 @@ variable "administrator_login" {
 variable "administrator_password" {
   type        = string
   description = <<-EOT
-    Server administrator password, held at nl-prod-shared-kv/postgres-admin-password.
+    Server administrator password, held at nl-prod-data-kv/postgres-admin-password.
     Consumed as a write-only attribute, so it is never written to state. Null by
     default: a plan needs no secret, and neither does an apply that changes nothing
     on the server itself. Supply it, with administrator_password_wo_version, for any
