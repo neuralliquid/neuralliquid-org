@@ -93,7 +93,6 @@ variable "tenant_databases" {
   EOT
   default = {
     convolens = "convolens"
-    tarmac    = "tarmac"
   }
 }
 

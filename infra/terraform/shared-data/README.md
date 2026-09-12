@@ -20,7 +20,12 @@ provider and holds no database credentials.
 | Database | Owning product | Owning role | Notes |
 | --- | --- | --- | --- |
 | `convolens` | `convolens` | `convolens` | Primary NeuralLiquid tenant |
-| `tarmac` | `tarmac` | `tarmac` | Quotes/invoices document service (`packages/launchpad`). Database declared; onboarding steps 2–4 below pending. |
+
+> **Removed (2026-09-12):** a `tarmac` tenant database was declared here,
+> predating tarmac's move under the `celladore` GitHub org. It was never
+> applied (`terraform plan` still showed it as 1 to add), so removing the
+> declaration required no destroy. tarmac's home is `celladore-sub`'s
+> `infrastructure/shared-data` stack.
 
 > **HOV Exclusion Policy (ADR 0004 & Baton 37547ca3):**
 > House of Veritas (`house-of-veritas`) is strictly excluded from `neuralliquid-sub`'s
@@ -127,12 +132,12 @@ For the step-by-step procedure to migrate the `convolens` database from the lega
 ## Deliberate Non-Goals
 
 - **The Azure-generated firewall rule name is kept as-is.** Renaming it to
-  something readable would destroy and recreate the rule, briefly cutting both
-  applications off the server. Not worth the tidiness.
+  something readable would destroy and recreate the rule, briefly cutting the
+  Convolens tenant application off the server. Not worth the tidiness.
 - **`prevent_destroy` is set on tenant databases.** Removing a product from the
   map will fail the plan rather than drop its database. Decommissioning a tenant
   is a deliberate, out-of-band act.
 - **No private networking.** Access is by the Azure-services firewall allowance.
   Moving to a delegated subnet and private DNS zone is a real improvement and a
-  separate decision, because it touches both tenants' connection paths at once.
+  separate decision, because it touches the tenant's connection path.
 

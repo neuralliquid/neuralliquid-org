@@ -49,8 +49,8 @@ resource "azurerm_postgresql_flexible_server" "shared" {
   backup_retention_days        = 7
   geo_redundant_backup_enabled = false
 
-  # Access is by firewall rule, not private networking: the two tenant
-  # applications reach the server over the Azure services allowance below.
+  # Access is by firewall rule, not private networking: the tenant
+  # application reaches the server over the Azure services allowance below.
   public_network_access_enabled = true
 
   tags = local.tags
@@ -81,17 +81,13 @@ resource "azurerm_postgresql_flexible_server_database" "tenant" {
 }
 
 # Azure-managed sentinel firewall rule (0.0.0.0/0.0.0.0) imported from live configuration.
-# Permits Azure-hosted callers — currently the Convolens tenant runtime in neuralliquid-sub;
-# Tarmac's runtime will reach the server the same way once its own onboarding lands.
-# The `convolens` and `tarmac` tenant databases are declared on this server; `tarmac`'s
-# database exists once this stack applies, but its role/schema/PUBLIC-CONNECT-revoke are
-# still pending (see the shared-data README's "Onboarding a Tenant" steps 2–4).
+# Permits Azure-hosted callers — currently the Convolens tenant runtime in neuralliquid-sub.
+# The `convolens` tenant database is declared on this server.
 #
 # COMPENSATING SECURITY CONTROLS:
 # 1. Tenant Isolation: Default PUBLIC CONNECT is revoked on each tenant database as part of
 #    tenant onboarding (`convolens` revoked 2026-08-07 via `REVOKE CONNECT ON DATABASE convolens
-#    FROM PUBLIC`; `tarmac` pending onboarding step 3), allowing only each tenant's own
-#    authenticated role access once revoked.
+#    FROM PUBLIC`), allowing only each tenant's own authenticated role access once revoked.
 # 2. Encryption: Forced TLS 1.2+ (`ssl_min_protocol_version = "TLSv1.2"`) and `require_secure_transport = "ON"`.
 # 3. Authentication: SCRAM-SHA-256 hashed strong credentials stored in Key Vault.
 # 4. Roadmap: Migration to private endpoints / delegated VNet subnet once Container Apps VNet integration is provisioned.
