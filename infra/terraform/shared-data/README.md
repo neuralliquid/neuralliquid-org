@@ -132,8 +132,8 @@ For the step-by-step procedure to migrate the `convolens` database from the lega
 ## Deliberate Non-Goals
 
 - **The Azure-generated firewall rule name is kept as-is.** Renaming it to
-  something readable would destroy and recreate the rule, briefly cutting both
-  applications off the server. Not worth the tidiness.
+  something readable would destroy and recreate the rule, briefly cutting the
+  Convolens tenant application off the server. Not worth the tidiness.
 - **`prevent_destroy` is set on tenant databases.** Removing a product from the
   map will fail the plan rather than drop its database. Decommissioning a tenant
   is a deliberate, out-of-band act.
