@@ -27,6 +27,10 @@ resource "random_password" "postgres_admin" {
   length           = 32
   special          = true
   override_special = "!#$%&*()-_=+[]{}<>:?"
+  min_upper        = 1
+  min_lower        = 1
+  min_numeric      = 1
+  min_special      = 1
 }
 
 resource "azurerm_postgresql_flexible_server" "shared" {
@@ -36,9 +40,12 @@ resource "azurerm_postgresql_flexible_server" "shared" {
   version             = "16"
   zone                = "2"
 
-  administrator_login               = var.administrator_login
-  administrator_password_wo         = coalesce(var.administrator_password, random_password.postgres_admin.result)
-  administrator_password_wo_version = 1
+  administrator_login       = var.administrator_login
+  administrator_password_wo = coalesce(var.administrator_password, random_password.postgres_admin.result)
+  # Bump with any intentional administrator-password rotation. This change
+  # accompanies the strengthened generated-password constraints above, which
+  # replace the random value for an existing state.
+  administrator_password_wo_version = 2
 
   # Burstable tier, Standard_B1ms. The provider prefixes the tier: B / GP / MO.
   sku_name          = "B_Standard_B1ms"
